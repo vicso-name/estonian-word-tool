@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estonian Word Tool</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f7f7fb; color: #1f2937; }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    .card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 6px 24px rgba(0,0,0,0.06); margin-bottom: 20px; }
+    textarea { width: 100%; min-height: 180px; border: 1px solid #d1d5db; border-radius: 12px; padding: 12px; font-size: 14px; }
+    input[type=file] { margin-top: 12px; }
+    .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+    button, .btn { display: inline-block; border: 0; border-radius: 10px; padding: 12px 16px; background: #111827; color: white; text-decoration: none; cursor: pointer; }
+    .btn.secondary { background: #4b5563; }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+    .flash { background: #e0f2fe; color: #075985; padding: 12px 14px; border-radius: 10px; margin-bottom: 16px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: left; white-space: nowrap; }
+    th { background: #f9fafb; }
+    h1, h2, h3 { margin-top: 0; }
+    .muted { color: #6b7280; }
+    .count { font-size: 13px; color: #6b7280; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Estonian Word Tool</h1>
+      <p class="muted">Вставь слова вручную или загрузи CSV/JSON. Сервис попробует получить формы из Ekilex и разложить слова по частям речи.</p>
+
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          {% for message in messages %}
+            <div class="flash">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form action="{{ url_for('process_words') }}" method="post" enctype="multipart/form-data">
+        <label for="words"><strong>Список слов</strong></label>
+        <textarea id="words" name="words" placeholder="Например:
+ema
+isa
+õppima
+raske"></textarea>
+
+        <div style="margin-top: 14px;">
+          <label for="word_file"><strong>Импорт файла</strong></label><br>
+          <input id="word_file" type="file" name="word_file" accept=".csv,.json">
+        </div>
+
+        <div class="actions">
+          <button type="submit">Обработать</button>
+          <a class="btn secondary" href="{{ url_for('export_csv') }}">Скачать CSV</a>
+          <a class="btn secondary" href="{{ url_for('export_json') }}">Скачать JSON</a>
+          <form action="{{ url_for('clear_results') }}" method="post" style="margin: 0;">
+            <button type="submit" class="btn secondary">Очистить</button>
+          </form>
+        </div>
+      </form>
+    </div>
+
+    {% if grouped %}
+
+      {% set nouns = grouped.get('nouns', []) %}
+      {% if nouns %}
+        <div class="card">
+          <h2>Существительные</h2>
+          <div class="count">Слов: {{ nouns|length }}</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Lemma</th>
+                  <th>Перевод</th>
+                  <th>Nimetav</th>
+                  <th>Omastav</th>
+                  <th>Osastav</th>
+                  <th>Уровень</th>
+                  <th>Заметка</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in nouns %}
+                  <tr>
+                    <td>{{ row.lemma }}</td>
+                    <td>{{ row.translation_ru or row.translation or '' }}</td>
+                    <td>{{ row.nimetav or '' }}</td>
+                    <td>{{ row.omastav or '' }}</td>
+                    <td>{{ row.osastav or '' }}</td>
+                    <td>{{ row.proficiency_level or row.level or '' }}</td>
+                    <td>{{ row.notes or row.note or '' }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endif %}
+
+      {% set adjectives = grouped.get('adjectives', []) %}
+      {% if adjectives %}
+        <div class="card">
+          <h2>Прилагательные</h2>
+          <div class="count">Слов: {{ adjectives|length }}</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Lemma</th>
+                  <th>Перевод</th>
+                  <th>Nimetav</th>
+                  <th>Omastav</th>
+                  <th>Osastav</th>
+                  <th>Уровень</th>
+                  <th>Заметка</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in adjectives %}
+                  <tr>
+                    <td>{{ row.lemma }}</td>
+                    <td>{{ row.translation_ru or row.translation or '' }}</td>
+                    <td>{{ row.nimetav or '' }}</td>
+                    <td>{{ row.omastav or '' }}</td>
+                    <td>{{ row.osastav or '' }}</td>
+                    <td>{{ row.proficiency_level or row.level or '' }}</td>
+                    <td>{{ row.notes or row.note or '' }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endif %}
+
+      {% set verbs = grouped.get('verbs', []) %}
+      {% if verbs %}
+        <div class="card">
+          <h2>Глаголы</h2>
+          <div class="count">Слов: {{ verbs|length }}</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Lemma</th>
+                  <th>Перевод</th>
+                  <th>ma-inf</th>
+                  <th>da-inf</th>
+                  <th>vat/extra</th>
+                  <th>3sg pres</th>
+                  <th>3sg past</th>
+                  <th>-nud</th>
+                  <th>Imper 2sg</th>
+                  <th>Уровень</th>
+                  <th>Заметка</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in verbs %}
+                  <tr>
+                    <td>{{ row.lemma }}</td>
+                    <td>{{ row.translation_ru or row.translation or '' }}</td>
+                    <td>{{ row.ma_infinitive or row.ma_inf or '' }}</td>
+                    <td>{{ row.da_infinitive or row.da_inf or '' }}</td>
+                    <td>{{ row.vat_infinitive or row.extra_form or '' }}</td>
+                    <td>{{ row.present_3sg or row.pres_3sg or '' }}</td>
+                    <td>{{ row.past_3sg or '' }}</td>
+                    <td>{{ row.nud_participle or row.nud_form or '' }}</td>
+                    <td>{{ row.imperative_2sg or row.imper_2sg or '' }}</td>
+                    <td>{{ row.proficiency_level or row.level or '' }}</td>
+                    <td>{{ row.notes or row.note or '' }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endif %}
+
+      {% set other = grouped.get('other', []) %}
+      {% if other %}
+        <div class="card">
+          <h2>Другие</h2>
+          <div class="count">Слов: {{ other|length }}</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Lemma</th>
+                  <th>Перевод</th>
+                  <th>Часть речи</th>
+                  <th>Уровень</th>
+                  <th>Заметка</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in other %}
+                  <tr>
+                    <td>{{ row.lemma }}</td>
+                    <td>{{ row.translation_ru or row.translation or '' }}</td>
+                    <td>{{ row.part_of_speech or '' }}</td>
+                    <td>{{ row.proficiency_level or row.level or '' }}</td>
+                    <td>{{ row.notes or row.note or '' }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endif %}
+
+    {% endif %}
+  </div>
+</body>
+</html>
