@@ -1,34 +1,390 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Estonian Word Tool</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; background: #f7f7fb; color: #1f2937; }
-    .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
-    .card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 6px 24px rgba(0,0,0,0.06); margin-bottom: 20px; }
-    textarea { width: 100%; min-height: 180px; border: 1px solid #d1d5db; border-radius: 12px; padding: 12px; font-size: 14px; }
-    input[type=file] { margin-top: 12px; }
-    .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
-    button, .btn { display: inline-block; border: 0; border-radius: 10px; padding: 12px 16px; background: #111827; color: white; text-decoration: none; cursor: pointer; }
-    .btn.secondary { background: #4b5563; }
-    .grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
-    .flash { background: #e0f2fe; color: #075985; padding: 12px 14px; border-radius: 10px; margin-bottom: 16px; }
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th, td { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: left; white-space: nowrap; }
-    th { background: #f9fafb; }
-    h1, h2, h3 { margin-top: 0; }
-    .muted { color: #6b7280; }
-    .count { font-size: 13px; color: #6b7280; margin-bottom: 10px; }
+    :root {
+      --bg: #f3f5f9;
+      --panel: rgba(255, 255, 255, 0.88);
+      --panel-border: rgba(15, 23, 42, 0.08);
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --secondary: #e2e8f0;
+      --secondary-text: #334155;
+      --input-bg: #ffffff;
+      --input-border: #cbd5e1;
+      --shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+      --radius-xl: 24px;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 28%),
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.08), transparent 24%),
+        var(--bg);
+    }
+
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 24px 56px;
+    }
+
+    .hero-card {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      padding: 32px;
+      backdrop-filter: blur(14px);
+    }
+
+    .hero-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+
+    .hero-copy {
+      max-width: 760px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--primary);
+      background: rgba(37, 99, 235, 0.08);
+      border: 1px solid rgba(37, 99, 235, 0.12);
+      border-radius: 999px;
+      padding: 8px 12px;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(34px, 5vw, 48px);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+
+    .subtitle {
+      margin: 0;
+      max-width: 760px;
+      font-size: 18px;
+      line-height: 1.65;
+      color: var(--muted);
+    }
+
+    .hero-badge {
+      min-width: 220px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(248,250,252,0.95));
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 20px;
+      padding: 18px;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+    }
+
+    .hero-badge-label {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .hero-badge-value {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+
+    .hero-badge-note {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .flash {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid rgba(37, 99, 235, 0.14);
+      padding: 14px 16px;
+      border-radius: 14px;
+      margin-bottom: 18px;
+      font-size: 14px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 0.8fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .field-card {
+      background: rgba(255,255,255,0.78);
+      border: 1px solid rgba(15, 23, 42, 0.06);
+      border-radius: 20px;
+      padding: 20px;
+    }
+
+    .label {
+      display: inline-block;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .hint {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 10px 0 0;
+      line-height: 1.5;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 280px;
+      resize: vertical;
+      border: 1px solid var(--input-border);
+      border-radius: 16px;
+      padding: 16px 18px;
+      font-size: 15px;
+      line-height: 1.6;
+      background: var(--input-bg);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    textarea:focus {
+      border-color: rgba(37, 99, 235, 0.55);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+
+    .upload-box {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .upload-area {
+      border: 1px dashed #94a3b8;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+      border-radius: 18px;
+      padding: 18px;
+    }
+
+    .upload-title {
+      font-weight: 700;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+
+    .upload-desc {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      font-size: 14px;
+      color: var(--secondary-text);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .actions form {
+      margin: 0;
+    }
+
+    button,
+    .btn {
+      appearance: none;
+      border: 0;
+      border-radius: 14px;
+      padding: 14px 18px;
+      min-height: 48px;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    button:hover,
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 12px 24px rgba(37, 99, 235, 0.22);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background: var(--secondary);
+      color: var(--secondary-text);
+    }
+
+    .btn-secondary:hover {
+      background: #dbe3ee;
+    }
+
+    .quick-notes {
+      margin-top: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 999px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: #475569;
+    }
+
+    .table-card {
+      background: white;
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.06);
+      margin-top: 20px;
+      border: 1px solid rgba(15, 23, 42, 0.05);
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      padding: 12px 12px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #f8fafc;
+    }
+
+    .count {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    @media (max-width: 980px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-card {
+        padding: 24px;
+      }
+
+      textarea {
+        min-height: 220px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .wrap {
+        padding: 20px 14px 40px;
+      }
+
+      .hero-card,
+      .table-card {
+        border-radius: 20px;
+        padding: 18px;
+      }
+
+      .subtitle {
+        font-size: 16px;
+      }
+
+      button,
+      .btn {
+        width: 100%;
+      }
+
+      .actions {
+        flex-direction: column;
+      }
+
+      .actions form {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="card">
-      <h1>Estonian Word Tool</h1>
-      <p class="muted">Вставь слова вручную или загрузи CSV/JSON. Сервис попробует получить формы из Ekilex и разложить слова по частям речи.</p>
+    <div class="hero-card">
+      <div class="hero-top">
+        <div class="hero-copy">
+          <div class="eyebrow">🇪🇪 Учебный инструмент для эстонских слов</div>
+          <h1>Estonian Word Tool</h1>
+          <p class="subtitle">
+            Вставь список слов вручную или загрузи CSV/JSON. Сервис попробует получить формы из Ekilex,
+            определить часть речи и подготовить удобную структуру для учебы.
+          </p>
+        </div>
+
+        <div class="hero-badge">
+          <div class="hero-badge-label">Что умеет сейчас</div>
+          <div class="hero-badge-value">CSV + JSON</div>
+          <div class="hero-badge-note">
+            Существительные, прилагательные, глаголы и другие части речи с раздельным выводом.
+          </div>
+        </div>
+      </div>
 
       {% with messages = get_flashed_messages() %}
         {% if messages %}
@@ -39,25 +395,53 @@
       {% endwith %}
 
       <form action="{{ url_for('process_words') }}" method="post" enctype="multipart/form-data">
-        <label for="words"><strong>Список слов</strong></label>
-        <textarea id="words" name="words" placeholder="Например:
+        <div class="form-grid">
+          <div class="field-card">
+            <label class="label" for="words">Список слов</label>
+            <textarea
+              id="words"
+              name="words"
+              placeholder="Например:
 ema
 isa
 õppima
-raske"></textarea>
+raske
+raamat
+suur"
+            ></textarea>
+            <p class="hint">
+              По одному слову на строку. Можно вставлять и через запятую — если нормализация уже включена, список обработается корректно.
+            </p>
+          </div>
 
-        <div style="margin-top: 14px;">
-          <label for="word_file"><strong>Импорт файла</strong></label><br>
-          <input id="word_file" type="file" name="word_file" accept=".csv,.json">
-        </div>
+          <div class="field-card upload-box">
+            <div class="upload-area">
+              <div class="upload-title">Импорт файла</div>
+              <div class="upload-desc">
+                Загрузи CSV или JSON со списком слов. Подойдут простые списки или объекты с полями вроде
+                <strong>word</strong>, <strong>lemma</strong>, <strong>estonian</strong>.
+              </div>
+              <input id="word_file" type="file" name="word_file" accept=".csv,.json">
+            </div>
 
-        <div class="actions">
-          <button type="submit">Обработать</button>
-          <a class="btn secondary" href="{{ url_for('export_csv') }}">Скачать CSV</a>
-          <a class="btn secondary" href="{{ url_for('export_json') }}">Скачать JSON</a>
-          <form action="{{ url_for('clear_results') }}" method="post" style="margin: 0;">
-            <button type="submit" class="btn secondary">Очистить</button>
-          </form>
+            <div>
+              <div class="label" style="margin-bottom: 10px;">Действия</div>
+              <div class="actions">
+                <button type="submit" class="btn-primary">Обработать слова</button>
+                <a class="btn btn-secondary" href="{{ url_for('export_csv') }}">Скачать CSV</a>
+                <a class="btn btn-secondary" href="{{ url_for('export_json') }}">Скачать JSON</a>
+                <form action="{{ url_for('clear_results') }}" method="post">
+                  <button type="submit" class="btn-secondary">Очистить</button>
+                </form>
+              </div>
+            </div>
+
+            <div class="quick-notes">
+              <div class="chip">⚡ Быстрый внутренний инструмент</div>
+              <div class="chip">📚 Для учебных списков</div>
+              <div class="chip">🧩 Подготовка данных для CSV/JSON</div>
+            </div>
+          </div>
         </div>
       </form>
     </div>
@@ -66,7 +450,7 @@ raske"></textarea>
 
       {% set nouns = grouped.get('nouns', []) %}
       {% if nouns %}
-        <div class="card">
+        <div class="table-card">
           <h2>Существительные</h2>
           <div class="count">Слов: {{ nouns|length }}</div>
           <div class="table-wrap">
@@ -102,7 +486,7 @@ raske"></textarea>
 
       {% set adjectives = grouped.get('adjectives', []) %}
       {% if adjectives %}
-        <div class="card">
+        <div class="table-card">
           <h2>Прилагательные</h2>
           <div class="count">Слов: {{ adjectives|length }}</div>
           <div class="table-wrap">
@@ -138,7 +522,7 @@ raske"></textarea>
 
       {% set verbs = grouped.get('verbs', []) %}
       {% if verbs %}
-        <div class="card">
+        <div class="table-card">
           <h2>Глаголы</h2>
           <div class="count">Слов: {{ verbs|length }}</div>
           <div class="table-wrap">
@@ -182,7 +566,7 @@ raske"></textarea>
 
       {% set other = grouped.get('other', []) %}
       {% if other %}
-        <div class="card">
+        <div class="table-card">
           <h2>Другие</h2>
           <div class="count">Слов: {{ other|length }}</div>
           <div class="table-wrap">
