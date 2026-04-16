@@ -31,16 +31,18 @@
       margin: 0;
       font-family: Inter, Arial, sans-serif;
       color: var(--text);
-      background:
-        radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 28%),
-        radial-gradient(circle at top right, rgba(14, 165, 233, 0.08), transparent 24%),
-        var(--bg);
+      background: var(--bg);
+      min-height: 100vh;
     }
 
-    .wrap {
+   .wrap {
       max-width: 1200px;
+      min-height: 100vh;
       margin: 0 auto;
-      padding: 40px 24px 56px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
 
     .hero-card {
@@ -369,17 +371,16 @@
     <div class="hero-card">
       <div class="hero-top">
         <div class="hero-copy">
-          <div class="eyebrow">🇪🇪 Учебный инструмент для эстонских слов</div>
+          <div class="eyebrow">Учебный инструмент для эстонских слов</div>
           <h1>Estonian Word Tool</h1>
           <p class="subtitle">
-            Вставь список слов вручную или загрузи CSV/JSON. Сервис попробует получить формы из Ekilex,
+            Вставь список слов вручную. Сервис попробует получить формы из Ekilex,
             определить часть речи и подготовить удобную структуру для учебы.
           </p>
         </div>
 
         <div class="hero-badge">
-          <div class="hero-badge-label">Что умеет сейчас</div>
-          <div class="hero-badge-value">CSV + JSON</div>
+          <div class="hero-badge-value">Что умеет сейчас</div>
           <div class="hero-badge-note">
             Существительные, прилагательные, глаголы и другие части речи с раздельным выводом.
           </div>
@@ -395,36 +396,19 @@
       {% endwith %}
 
       <form action="{{ url_for('process_words') }}" method="post" enctype="multipart/form-data">
-        <div class="form-grid">
-          <div class="field-card">
+        <div class="field-card">
             <label class="label" for="words">Список слов</label>
             <textarea
               id="words"
               name="words"
-              placeholder="Например:
-ema
-isa
-õppima
-raske
-raamat
-suur"
+              placeholder="Вводи каждое слово с новой строки"
             ></textarea>
+
             <p class="hint">
               По одному слову на строку. Можно вставлять и через запятую — если нормализация уже включена, список обработается корректно.
             </p>
-          </div>
 
-          <div class="field-card upload-box">
-            <div class="upload-area">
-              <div class="upload-title">Импорт файла</div>
-              <div class="upload-desc">
-                Загрузи CSV или JSON со списком слов. Подойдут простые списки или объекты с полями вроде
-                <strong>word</strong>, <strong>lemma</strong>, <strong>estonian</strong>.
-              </div>
-              <input id="word_file" type="file" name="word_file" accept=".csv,.json">
-            </div>
-
-            <div>
+            <div style="margin-top: 18px;">
               <div class="label" style="margin-bottom: 10px;">Действия</div>
               <div class="actions">
                 <button type="submit" class="btn-primary">Обработать слова</button>
@@ -441,6 +425,7 @@ suur"
               <div class="chip">📚 Для учебных списков</div>
               <div class="chip">🧩 Подготовка данных для CSV/JSON</div>
             </div>
+
           </div>
         </div>
       </form>
