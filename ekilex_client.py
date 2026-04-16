@@ -85,7 +85,7 @@ class EkilexClient:
 
     def search_word(self, lemma: str) -> Optional[int]:
         data = self._get(f"/api/word/search/{requests.utils.quote(lemma)}")
-        words = data.get("words", [])
+        words = data.get("words") or []
         if not words:
             return None
 
@@ -105,12 +105,13 @@ class EkilexClient:
     def detect_part_of_speech(self, word_id: int) -> str:
         details = self.get_word_details(word_id)
 
-        for lexeme in details.get("lexemes", []):
-            pos_list = lexeme.get("pos", [])
+        for lexeme in (details.get("lexemes") or []):
+            pos_list = lexeme.get("pos") or []
             if not pos_list:
                 continue
 
-            code = (pos_list[0].get("code") or "").lower()
+            first_pos = pos_list[0] or {}
+            code = (first_pos.get("code") or "").lower()
 
             if code in ("v", "verb"):
                 return "VERB"
@@ -126,11 +127,11 @@ class EkilexClient:
         return "OTHER"
 
     def extract_translation(self, details: Dict[str, Any]) -> Optional[str]:
-        relation_details = details.get("wordRelationDetails", {})
-        groups = relation_details.get("primaryWordRelationGroups", [])
+        relation_details = details.get("wordRelationDetails") or {}
+        groups = relation_details.get("primaryWordRelationGroups") or []
 
         for group in groups:
-            for member in group.get("members", []):
+            for member in (group.get("members") or []):
                 if member.get("wordLang") == "rus" and member.get("wordValue"):
                     return self.strip_html(member["wordValue"])
 
@@ -160,13 +161,13 @@ class EkilexClient:
         if not paradigm_data:
             return forms
 
-        paradigm = paradigm_data[0]
-        paradigm_forms = paradigm.get("paradigmForms", [])
+        paradigm = paradigm_data[0] or {}
+        paradigm_forms = paradigm.get("paradigmForms") or []
 
         if part_of_speech in ("NOUN", "ADJ"):
             for form in paradigm_forms:
                 value = form.get("value", "")
-                code = (form.get("morphCode", "") or "").lower()
+                code = (form.get("morphCode") or "").lower()
 
                 if code == "sgn" and not forms["nimetav"]:
                     forms["nimetav"] = value
@@ -178,7 +179,7 @@ class EkilexClient:
         elif part_of_speech == "VERB":
             for form in paradigm_forms:
                 value = form.get("value", "")
-                code = form.get("morphCode", "")
+                code = form.get("morphCode") or ""
 
                 if code == "Sup" and not forms["ma_inf"]:
                     forms["ma_inf"] = value
