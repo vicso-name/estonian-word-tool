@@ -158,9 +158,13 @@
             {% for row in nouns %}
             <tr class="word-row {% if row.status == 'error' %}row-error{% endif %}" data-word="{{ row.lemma }}">
               <td class="word-cell">
-                <span class="word-main">{{ row.lemma }}</span>
-                {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
-                <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
+                <div class="word-cell-inner">
+                  <div class="word-status">
+                    <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
+                    {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
+                  </div>
+                  <span class="word-main">{{ row.lemma }}</span>
+                </div>
               </td>
               <td class="data-cell ru cell-ru">
                 <span class="maskable">{{ row.translation or '' }}</span>
@@ -209,9 +213,13 @@
             {% for row in adjectives %}
             <tr class="word-row {% if row.status == 'error' %}row-error{% endif %}" data-word="{{ row.lemma }}">
               <td class="word-cell">
-                <span class="word-main">{{ row.lemma }}</span>
-                {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
-                <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
+                <div class="word-cell-inner">
+                  <div class="word-status">
+                    <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
+                    {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
+                  </div>
+                  <span class="word-main">{{ row.lemma }}</span>
+                </div>
               </td>
               <td class="data-cell ru cell-ru"><span class="maskable">{{ row.translation or '' }}</span><div class="reveal-hint">нажми</div></td>
               {% if row.status == 'error' %}
@@ -261,9 +269,13 @@
             {% for row in verbs %}
             <tr class="word-row {% if row.status == 'error' %}row-error{% endif %}" data-word="{{ row.lemma }}">
               <td class="word-cell">
-                <span class="word-main">{{ row.lemma }}</span>
-                {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
-                <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
+                <div class="word-cell-inner">
+                  <div class="word-status">
+                    <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
+                    {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
+                  </div>
+                  <span class="word-main">{{ row.lemma }}</span>
+                </div>
               </td>
               <td class="data-cell ru cell-ru"><span class="maskable">{{ row.translation or '' }}</span><div class="reveal-hint">нажми</div></td>
               {% if row.status == 'error' %}
@@ -309,9 +321,13 @@
             {% for row in adverbs %}
             <tr class="word-row {% if row.status == 'error' %}row-error{% endif %}" data-word="{{ row.lemma }}">
               <td class="word-cell">
-                <span class="word-main">{{ row.lemma }}</span>
-                {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
-                <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
+                <div class="word-cell-inner">
+                  <div class="word-status">
+                    <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
+                    {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
+                  </div>
+                  <span class="word-main">{{ row.lemma }}</span>
+                </div>
               </td>
               <td class="data-cell ru cell-ru"><span class="maskable">{{ row.translation or '' }}</span><div class="reveal-hint">нажми</div></td>
               <td class="data-cell note">{{ row.note or '' }}</td>
@@ -346,9 +362,13 @@
             {% for row in pronouns %}
             <tr class="word-row {% if row.status == 'error' %}row-error{% endif %}" data-word="{{ row.lemma }}">
               <td class="word-cell">
-                <span class="word-main">{{ row.lemma }}</span>
-                {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
-                <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
+                <div class="word-cell-inner">
+                  <div class="word-status">
+                    <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
+                    {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
+                  </div>
+                  <span class="word-main">{{ row.lemma }}</span>
+                </div>
               </td>
               <td class="data-cell ru cell-ru"><span class="maskable">{{ row.translation or '' }}</span><div class="reveal-hint">нажми</div></td>
               {% if row.status == 'error' %}
@@ -390,9 +410,13 @@
             {% for row in other %}
             <tr class="word-row {% if row.status == 'error' %}row-error{% endif %}" data-word="{{ row.lemma }}">
               <td class="word-cell">
-                <span class="word-main">{{ row.lemma }}</span>
-                {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
-                <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
+                <div class="word-cell-inner">
+                  <div class="word-status">
+                    <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
+                    {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
+                  </div>
+                  <span class="word-main">{{ row.lemma }}</span>
+                </div>
               </td>
               <td class="data-cell ru cell-ru"><span class="maskable">{{ row.translation or '' }}</span><div class="reveal-hint">нажми</div></td>
               <td class="data-cell" style="color:var(--text3);font-size:.75rem;">{{ row.part_of_speech or '' }}</td>
