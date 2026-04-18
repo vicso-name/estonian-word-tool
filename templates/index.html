@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Eesti Sõnad</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
-  <!-- Prevent theme flash: apply before render -->
   <script>
     (function () {
       var t = localStorage.getItem('eesti_theme_v1') || 'light';
@@ -13,434 +12,97 @@
     })();
   </script>
 </head>
-<body class="mode-read" id="body" data-total="{{ stats.total if stats else 0 }}">
-
-  <!-- ─── TOPBAR ──────────────────────────────────────── -->
+<body>
   <header class="topbar">
-    <div class="topbar-logo">
-      <span>🇪🇪</span> Eesti <span class="et">Sõnad</span>
-    </div>
-    <div class="topbar-divider"></div>
-
-    <!-- Global study mode -->
-    <div class="mode-pill" id="globalModePill">
-      <button class="mode-btn active" onclick="setGlobalMode('read', this)">📖 Читаю</button>
-      <button class="mode-btn" onclick="setGlobalMode('hide-ru', this)">🎯 Скрыть перевод</button>
-      <button class="mode-btn" onclick="setGlobalMode('hide-et', this)">🔤 Скрыть эстонский</button>
-    </div>
-
+    <div class="topbar-logo">🇪🇪 Eesti <span class="et">Sõnad</span></div>
     <div class="topbar-spacer"></div>
-
-    <!-- Progress (only if results exist) -->
-    {% if stats and stats.total > 0 %}
-    <div class="progress-badge" id="progressBadge">
-      <div class="progress-bar-wrap">
-        <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
-      </div>
-      <span id="progressText" class="progress-count">0</span>
-      <span style="color:var(--text3)">/</span>
-      <span style="color:var(--text2)">{{ stats.total }}</span>
-    </div>
-    {% endif %}
-
-    <!-- Theme toggle -->
     <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Сменить тему">🌙</button>
   </header>
 
-  <!-- ─── FLASH MESSAGES ──────────────────────────────── -->
   {% with messages = get_flashed_messages() %}
     {% if messages %}
       <div class="flash-wrap">
-        {% for message in messages %}
-          <div class="flash">{{ message }}</div>
-        {% endfor %}
+        {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
       </div>
     {% endif %}
   {% endwith %}
-
   {% if ekilex_client_error %}
-    <div class="flash-wrap">
-      <div class="flash error">⚠️ {{ ekilex_client_error }}</div>
-    </div>
+    <div class="flash-wrap"><div class="flash error">⚠️ {{ ekilex_client_error }}</div></div>
   {% endif %}
 
-  <!-- ─── INPUT PANEL ─────────────────────────────────── -->
-  <div class="input-panel">
-    <div class="input-inner">
-      <form action="{{ url_for('process_words') }}" method="post" enctype="multipart/form-data">
-        <div class="input-grid">
-          <div>
-            <div class="input-label">Слова для поиска</div>
-            <textarea name="words" id="words"
-              placeholder="olema, maja, suur&#10;по одному на строку или через запятую"></textarea>
+  <div class="dashboard">
+    <div class="dash-header">
+      <div>
+        <h1 class="dash-title">Мои списки</h1>
+        <p class="dash-sub">Создавай именованные списки слов, редактируй и учи</p>
+      </div>
+      <button class="btn btn-primary" onclick="openCreateModal()">+ Новый список</button>
+    </div>
+
+    {% if lists %}
+    <div class="list-grid">
+      {% for lst in lists %}
+      <div class="list-card">
+        <a href="{{ url_for('view_list', list_id=lst.id) }}" class="list-card-body">
+          <div class="list-card-name">{{ lst.name }}</div>
+          <div class="list-card-meta">
+            <span class="lc-stat lc-total">{{ lst.word_count or 0 }} слов</span>
+            {% if lst.ok_count %}<span class="lc-stat lc-ok">✓ {{ lst.ok_count }}</span>{% endif %}
+            {% if lst.error_count %}<span class="lc-stat lc-err">✗ {{ lst.error_count }}</span>{% endif %}
           </div>
-          <div class="input-actions">
-            <button type="submit" class="btn btn-primary">⚡ Обработать</button>
-            {% if stats and stats.total > 0 %}
-              <a class="btn btn-ghost" href="{{ url_for('export_csv') }}">↓ CSV</a>
-              <a class="btn btn-ghost" href="{{ url_for('export_json') }}">↓ JSON</a>
-            {% endif %}
-          </div>
+          <div class="list-card-date">{{ lst.updated_at[:10] }}</div>
+        </a>
+        <div class="list-card-actions">
+          <a href="{{ url_for('view_list', list_id=lst.id) }}" class="btn btn-ghost btn-sm">Открыть</a>
+          <form action="{{ url_for('delete_word_list', list_id=lst.id) }}" method="post"
+                onsubmit="return confirm('Удалить список «{{ lst.name }}»?')">
+            <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
+          </form>
         </div>
-        <div class="input-row2">
-          <label class="file-label" for="word_file">📎 Загрузить файл</label>
-          <input type="file" id="word_file" name="word_file" accept=".csv,.json" />
-          <span id="file-name"></span>
-          {% if stats and stats.total > 0 %}
-            <form action="{{ url_for('clear_results') }}" method="post" style="margin-left:auto">
-              <button type="submit" class="btn btn-danger">✕ Очистить</button>
-            </form>
-          {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">📚</div>
+      <div class="empty-title">Списков пока нет</div>
+      <div class="empty-sub">Создай первый список и начни учить эстонские слова</div>
+      <button class="btn btn-primary" style="margin-top:20px" onclick="openCreateModal()">+ Создать список</button>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="modal-backdrop" id="createModal" onclick="closeCreateModal(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Новый список</span>
+        <button class="modal-close" onclick="closeCreateModal()">✕</button>
+      </div>
+      <form action="{{ url_for('create_word_list') }}" method="post">
+        <div class="modal-body">
+          <label class="input-label" for="listName">Название</label>
+          <input type="text" id="listName" name="name" class="text-input"
+            placeholder="Например: Урок 1 — Семья" autofocus required />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" onclick="closeCreateModal()">Отмена</button>
+          <button type="submit" class="btn btn-primary">Создать</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- ─── RESULTS ─────────────────────────────────────── -->
-  {% if grouped %}
-
-  <div style="border-bottom:1px solid var(--border);">
-    <div class="stats-bar">
-      <div class="stat-item">
-        <div class="stat-dot total"></div>
-        Всего: <span class="stat-val">{{ stats.total }}</span>
-      </div>
-      <div class="stat-sep">·</div>
-      <div class="stat-item">
-        <div class="stat-dot ok"></div>
-        Найдено: <span class="stat-val">{{ stats.ok }}</span>
-      </div>
-      {% if stats.error > 0 %}
-        <div class="stat-sep">·</div>
-        <div class="stat-item">
-          <div class="stat-dot error"></div>
-          Ошибок: <span class="stat-val">{{ stats.error }}</span>
-        </div>
-      {% endif %}
-      <div class="stats-spacer"></div>
-      {% if last_processed_at %}
-        <div class="timestamp">{{ last_processed_at[:16].replace('T',' ') }} UTC</div>
-      {% endif %}
-    </div>
-  </div>
-
-  <div class="results">
-
-    {# ── NOUNS ─────────────────────────────────────── #}
-    {% set nouns = grouped.get('nouns', []) %}
-    {% if nouns %}
-    <div class="section" id="sec-nouns" data-section-mode="inherit">
-      <div class="section-header">
-        <span class="section-icon">🏠</span>
-        <span class="section-title">Существительные</span>
-        <span class="section-count">{{ nouns|length }}</span>
-        <span class="section-progress" id="sp-nouns">0 / {{ nouns|length }}</span>
-        <div class="section-mode-toggle">
-          <button class="sec-btn" onclick="setSectionMode('nouns','read',this)">📖</button>
-          <button class="sec-btn" onclick="setSectionMode('nouns','hide-ru',this)">🎯</button>
-          <button class="sec-btn" onclick="setSectionMode('nouns','hide-et',this)">🔤</button>
-        </div>
-        <button class="reveal-all-btn" onclick="revealAll('sec-nouns')">Показать всё</button>
-      </div>
-      <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Слово</th>
-              <th>Перевод</th>
-              <th>Nimetav</th>
-              <th>Omastav</th>
-              <th>Osastav</th>
-              <th>Заметка</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in nouns %}
-            <tr class="word-row {% if row.status == 'error' %}row-error{% endif %}" data-word="{{ row.lemma }}">
-              <td class="word-cell">
-                <div class="word-cell-inner">
-                  <div class="word-status">
-                    <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
-                    {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
-                  </div>
-                  <span class="word-main">{{ row.lemma }}</span>
-                </div>
-              </td>
-              <td class="data-cell ru cell-ru">
-                <span class="maskable">{{ row.translation or '' }}</span>
-                <div class="reveal-hint">нажми</div>
-              </td>
-              {% if row.status == 'error' %}
-                <td class="data-cell error-cell" colspan="4">{{ row.note or row.error or 'Ошибка' }}</td>
-              {% else %}
-                <td class="data-cell et cell-et"><span class="maskable">{{ row.nimetav or '' }}</span><div class="reveal-hint">нажми</div></td>
-                <td class="data-cell et cell-et"><span class="maskable">{{ row.omastav or '' }}</span></td>
-                <td class="data-cell et cell-et"><span class="maskable">{{ row.osastav or '' }}</span></td>
-                <td class="data-cell note">{{ row.note or '' }}</td>
-              {% endif %}
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-    {% endif %}
-
-    {# ── ADJECTIVES ────────────────────────────────── #}
-    {% set adjectives = grouped.get('adjectives', []) %}
-    {% if adjectives %}
-    <div class="section" id="sec-adjectives" data-section-mode="inherit">
-      <div class="section-header">
-        <span class="section-icon">🎨</span>
-        <span class="section-title">Прилагательные</span>
-        <span class="section-count">{{ adjectives|length }}</span>
-        <span class="section-progress" id="sp-adjectives">0 / {{ adjectives|length }}</span>
-        <div class="section-mode-toggle">
-          <button class="sec-btn" onclick="setSectionMode('adjectives','read',this)">📖</button>
-          <button class="sec-btn" onclick="setSectionMode('adjectives','hide-ru',this)">🎯</button>
-          <button class="sec-btn" onclick="setSectionMode('adjectives','hide-et',this)">🔤</button>
-        </div>
-        <button class="reveal-all-btn" onclick="revealAll('sec-adjectives')">Показать всё</button>
-      </div>
-      <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Слово</th><th>Перевод</th><th>Nimetav</th><th>Omastav</th><th>Osastav</th><th>Заметка</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in adjectives %}
-            <tr class="word-row {% if row.status == 'error' %}row-error{% endif %}" data-word="{{ row.lemma }}">
-              <td class="word-cell">
-                <div class="word-cell-inner">
-                  <div class="word-status">
-                    <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
-                    {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
-                  </div>
-                  <span class="word-main">{{ row.lemma }}</span>
-                </div>
-              </td>
-              <td class="data-cell ru cell-ru"><span class="maskable">{{ row.translation or '' }}</span><div class="reveal-hint">нажми</div></td>
-              {% if row.status == 'error' %}
-                <td class="data-cell error-cell" colspan="4">{{ row.note or row.error or 'Ошибка' }}</td>
-              {% else %}
-                <td class="data-cell et cell-et"><span class="maskable">{{ row.nimetav or '' }}</span><div class="reveal-hint">нажми</div></td>
-                <td class="data-cell et cell-et"><span class="maskable">{{ row.omastav or '' }}</span></td>
-                <td class="data-cell et cell-et"><span class="maskable">{{ row.osastav or '' }}</span></td>
-                <td class="data-cell note">{{ row.note or '' }}</td>
-              {% endif %}
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-    {% endif %}
-
-    {# ── VERBS ─────────────────────────────────────── #}
-    {% set verbs = grouped.get('verbs', []) %}
-    {% if verbs %}
-    <div class="section" id="sec-verbs" data-section-mode="inherit">
-      <div class="section-header">
-        <span class="section-icon">⚡</span>
-        <span class="section-title">Глаголы</span>
-        <span class="section-count">{{ verbs|length }}</span>
-        <span class="section-progress" id="sp-verbs">0 / {{ verbs|length }}</span>
-        <div class="section-mode-toggle">
-          <button class="sec-btn" onclick="setSectionMode('verbs','read',this)">📖</button>
-          <button class="sec-btn" onclick="setSectionMode('verbs','hide-ru',this)">🎯</button>
-          <button class="sec-btn" onclick="setSectionMode('verbs','hide-et',this)">🔤</button>
-        </div>
-        <button class="reveal-all-btn" onclick="revealAll('sec-verbs')">Показать всё</button>
-      </div>
-      <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Слово</th><th>Перевод</th>
-              <th>ma-inf</th><th>da-inf</th>
-              <th>3sg pres</th><th>3sg past</th>
-              <th>-nud</th><th>Imper. 2sg</th><th>Extra</th>
-              <th>Заметка</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in verbs %}
-            <tr class="word-row {% if row.status == 'error' %}row-error{% endif %}" data-word="{{ row.lemma }}">
-              <td class="word-cell">
-                <div class="word-cell-inner">
-                  <div class="word-status">
-                    <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
-                    {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
-                  </div>
-                  <span class="word-main">{{ row.lemma }}</span>
-                </div>
-              </td>
-              <td class="data-cell ru cell-ru"><span class="maskable">{{ row.translation or '' }}</span><div class="reveal-hint">нажми</div></td>
-              {% if row.status == 'error' %}
-                <td class="data-cell error-cell" colspan="8">{{ row.note or row.error or 'Ошибка' }}</td>
-              {% else %}
-                <td class="data-cell et cell-et"><span class="maskable">{{ row.ma_inf or '' }}</span><div class="reveal-hint">нажми</div></td>
-                <td class="data-cell et cell-et"><span class="maskable">{{ row.da_inf or '' }}</span></td>
-                <td class="data-cell et cell-et"><span class="maskable">{{ row.pres_3sg or '' }}</span></td>
-                <td class="data-cell et cell-et"><span class="maskable">{{ row.past_3sg or '' }}</span></td>
-                <td class="data-cell et cell-et"><span class="maskable">{{ row.nud_form or '' }}</span></td>
-                <td class="data-cell et cell-et"><span class="maskable">{{ row.imper_2sg or '' }}</span></td>
-                <td class="data-cell et cell-et"><span class="maskable">{{ row.extra_form or '' }}</span></td>
-                <td class="data-cell note">{{ row.note or '' }}</td>
-              {% endif %}
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-    {% endif %}
-
-    {# ── ADVERBS ───────────────────────────────────── #}
-    {% set adverbs = grouped.get('adverbs', []) %}
-    {% if adverbs %}
-    <div class="section" id="sec-adverbs" data-section-mode="inherit">
-      <div class="section-header">
-        <span class="section-icon">🔷</span>
-        <span class="section-title">Наречия</span>
-        <span class="section-count">{{ adverbs|length }}</span>
-        <span class="section-progress" id="sp-adverbs">0 / {{ adverbs|length }}</span>
-        <div class="section-mode-toggle">
-          <button class="sec-btn" onclick="setSectionMode('adverbs','read',this)">📖</button>
-          <button class="sec-btn" onclick="setSectionMode('adverbs','hide-ru',this)">🎯</button>
-          <button class="sec-btn" onclick="setSectionMode('adverbs','hide-et',this)">🔤</button>
-        </div>
-        <button class="reveal-all-btn" onclick="revealAll('sec-adverbs')">Показать всё</button>
-      </div>
-      <div class="table-scroll">
-        <table>
-          <thead><tr><th>Слово</th><th>Перевод</th><th>Заметка</th></tr></thead>
-          <tbody>
-            {% for row in adverbs %}
-            <tr class="word-row {% if row.status == 'error' %}row-error{% endif %}" data-word="{{ row.lemma }}">
-              <td class="word-cell">
-                <div class="word-cell-inner">
-                  <div class="word-status">
-                    <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
-                    {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
-                  </div>
-                  <span class="word-main">{{ row.lemma }}</span>
-                </div>
-              </td>
-              <td class="data-cell ru cell-ru"><span class="maskable">{{ row.translation or '' }}</span><div class="reveal-hint">нажми</div></td>
-              <td class="data-cell note">{{ row.note or '' }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-    {% endif %}
-
-    {# ── PRONOUNS ──────────────────────────────────── #}
-    {% set pronouns = grouped.get('pronouns', []) %}
-    {% if pronouns %}
-    <div class="section" id="sec-pronouns" data-section-mode="inherit">
-      <div class="section-header">
-        <span class="section-icon">👤</span>
-        <span class="section-title">Местоимения</span>
-        <span class="section-count">{{ pronouns|length }}</span>
-        <span class="section-progress" id="sp-pronouns">0 / {{ pronouns|length }}</span>
-        <div class="section-mode-toggle">
-          <button class="sec-btn" onclick="setSectionMode('pronouns','read',this)">📖</button>
-          <button class="sec-btn" onclick="setSectionMode('pronouns','hide-ru',this)">🎯</button>
-          <button class="sec-btn" onclick="setSectionMode('pronouns','hide-et',this)">🔤</button>
-        </div>
-        <button class="reveal-all-btn" onclick="revealAll('sec-pronouns')">Показать всё</button>
-      </div>
-      <div class="table-scroll">
-        <table>
-          <thead><tr><th>Слово</th><th>Перевод</th><th>Nimetav</th><th>Omastav</th><th>Osastav</th><th>Заметка</th></tr></thead>
-          <tbody>
-            {% for row in pronouns %}
-            <tr class="word-row {% if row.status == 'error' %}row-error{% endif %}" data-word="{{ row.lemma }}">
-              <td class="word-cell">
-                <div class="word-cell-inner">
-                  <div class="word-status">
-                    <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
-                    {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
-                  </div>
-                  <span class="word-main">{{ row.lemma }}</span>
-                </div>
-              </td>
-              <td class="data-cell ru cell-ru"><span class="maskable">{{ row.translation or '' }}</span><div class="reveal-hint">нажми</div></td>
-              {% if row.status == 'error' %}
-                <td class="data-cell error-cell" colspan="4">{{ row.note or row.error or 'Ошибка' }}</td>
-              {% else %}
-                <td class="data-cell et cell-et"><span class="maskable">{{ row.nimetav or '' }}</span><div class="reveal-hint">нажми</div></td>
-                <td class="data-cell et cell-et"><span class="maskable">{{ row.omastav or '' }}</span></td>
-                <td class="data-cell et cell-et"><span class="maskable">{{ row.osastav or '' }}</span></td>
-                <td class="data-cell note">{{ row.note or '' }}</td>
-              {% endif %}
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-    {% endif %}
-
-    {# ── OTHER ─────────────────────────────────────── #}
-    {% set other = grouped.get('other', []) %}
-    {% if other %}
-    <div class="section" id="sec-other" data-section-mode="inherit">
-      <div class="section-header">
-        <span class="section-icon">📦</span>
-        <span class="section-title">Другие</span>
-        <span class="section-count">{{ other|length }}</span>
-        <span class="section-progress" id="sp-other">0 / {{ other|length }}</span>
-        <div class="section-mode-toggle">
-          <button class="sec-btn" onclick="setSectionMode('other','read',this)">📖</button>
-          <button class="sec-btn" onclick="setSectionMode('other','hide-ru',this)">🎯</button>
-          <button class="sec-btn" onclick="setSectionMode('other','hide-et',this)">🔤</button>
-        </div>
-        <button class="reveal-all-btn" onclick="revealAll('sec-other')">Показать всё</button>
-      </div>
-      <div class="table-scroll">
-        <table>
-          <thead><tr><th>Слово</th><th>Перевод</th><th>Часть речи</th><th>Заметка</th></tr></thead>
-          <tbody>
-            {% for row in other %}
-            <tr class="word-row {% if row.status == 'error' %}row-error{% endif %}" data-word="{{ row.lemma }}">
-              <td class="word-cell">
-                <div class="word-cell-inner">
-                  <div class="word-status">
-                    <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
-                    {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
-                  </div>
-                  <span class="word-main">{{ row.lemma }}</span>
-                </div>
-              </td>
-              <td class="data-cell ru cell-ru"><span class="maskable">{{ row.translation or '' }}</span><div class="reveal-hint">нажми</div></td>
-              <td class="data-cell" style="color:var(--text3);font-size:.75rem;">{{ row.part_of_speech or '' }}</td>
-              <td class="data-cell note">{{ row.note or row.error or '' }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-    {% endif %}
-
-  </div>{# /results #}
-
-  {% else %}
-  <div style="max-width:1180px;margin:0 auto;padding:20px;">
-    <div class="empty-state">
-      <div class="empty-icon">🇪🇪</div>
-      <div class="empty-title">Список слов пуст</div>
-      <div class="empty-sub">Введи слова выше и нажми «Обработать»</div>
-    </div>
-  </div>
-  {% endif %}
-
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script>
+    function openCreateModal() {
+      document.getElementById('createModal').classList.add('open');
+      setTimeout(() => document.getElementById('listName').focus(), 60);
+    }
+    function closeCreateModal(e) {
+      if (!e || e.target === document.getElementById('createModal'))
+        document.getElementById('createModal').classList.remove('open');
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCreateModal(); });
+  </script>
 </body>
 </html>

@@ -464,3 +464,178 @@ body.mode-hide-et .cell-et .reveal-hint,
   .section-mode-toggle { display: none; }
   .topbar-divider { display: none; }
 }
+
+/* ══════════════════════════════════════════════════════
+   DASHBOARD
+   ══════════════════════════════════════════════════════ */
+.dashboard {
+  max-width: 1180px; margin: 0 auto; padding: 32px 20px;
+}
+.dash-header {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 16px;
+  margin-bottom: 28px;
+}
+.dash-title {
+  font-size: 1.4rem; font-weight: 700; letter-spacing: -.02em;
+  color: var(--text); margin-bottom: 4px;
+}
+.dash-sub { font-size: .82rem; color: var(--text2); }
+
+/* List card grid */
+.list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+.list-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); overflow: hidden;
+  transition: border-color .18s, box-shadow .18s;
+}
+.list-card:hover {
+  border-color: var(--blue-border);
+  box-shadow: 0 4px 20px var(--blue-dim);
+}
+.list-card-body {
+  display: block; padding: 18px 18px 12px;
+  text-decoration: none; color: inherit;
+}
+.list-card-name {
+  font-size: .95rem; font-weight: 700; color: var(--text);
+  margin-bottom: 10px; letter-spacing: -.01em;
+}
+.list-card-meta {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;
+}
+.lc-stat {
+  font-size: .7rem; font-weight: 600;
+  padding: 2px 8px; border-radius: 99px;
+}
+.lc-total { background: var(--blue-dim); color: var(--blue); border: 1px solid var(--blue-border); }
+[data-theme="dark"] .lc-total { color: var(--blue-xl); }
+.lc-ok    { background: var(--green-dim); color: var(--green); }
+.lc-err   { background: var(--red-dim); color: var(--red); }
+.list-card-date { font-size: .68rem; color: var(--text3); }
+.list-card-actions {
+  display: flex; gap: 6px; padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--bg3);
+}
+.btn-sm { padding: 5px 12px; font-size: .73rem; }
+
+/* ── MODAL ─────────────────────────────────────────────────── */
+.modal-backdrop {
+  display: none; position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,.45); backdrop-filter: blur(4px);
+  align-items: center; justify-content: center;
+}
+.modal-backdrop.open { display: flex; }
+.modal {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--r); width: 100%; max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  animation: modalIn .18s ease;
+}
+@keyframes modalIn {
+  from { transform: translateY(-12px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px; border-bottom: 1px solid var(--border);
+}
+.modal-title { font-size: .9rem; font-weight: 700; }
+.modal-close {
+  background: none; border: none; color: var(--text3);
+  cursor: pointer; font-size: .9rem; padding: 2px 6px;
+  transition: color .15s;
+}
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 18px; }
+.modal-footer {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 12px 18px; border-top: 1px solid var(--border);
+}
+
+/* Text input (modal) */
+.text-input {
+  width: 100%; padding: 9px 12px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--r-sm); color: var(--text);
+  font-family: var(--sans); font-size: .85rem;
+  transition: border-color .18s;
+}
+.text-input:focus { outline: none; border-color: var(--blue); }
+
+/* ── BACK BUTTON ────────────────────────────────────────────── */
+.back-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--surface); color: var(--text2);
+  text-decoration: none; font-size: 1rem;
+  transition: all .15s; flex-shrink: 0;
+}
+.back-btn:hover { background: var(--surface2); color: var(--text); }
+
+/* ── EDITABLE LIST NAME IN TOPBAR ───────────────────────────── */
+.list-name-display {
+  font-size: .88rem; font-weight: 700; color: var(--text);
+  cursor: pointer; max-width: 240px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 3px 6px; border-radius: var(--r-sm);
+  transition: background .15s;
+}
+.list-name-display:hover { background: var(--surface); }
+.list-name-input {
+  font-size: .88rem; font-weight: 700; color: var(--text);
+  background: var(--surface); border: 1px solid var(--blue);
+  border-radius: var(--r-sm); padding: 3px 8px;
+  font-family: var(--sans); width: 220px;
+}
+.list-name-input:focus { outline: none; }
+.hidden { display: none !important; }
+
+/* ── ADD PANEL ──────────────────────────────────────────────── */
+.add-panel-toggle {
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer; user-select: none;
+  font-size: .82rem; font-weight: 600; color: var(--text2);
+  padding: 4px 0; transition: color .15s;
+}
+.add-panel-toggle:hover { color: var(--text); }
+.chevron { font-size: .75rem; }
+.add-panel-body { margin-top: 14px; }
+
+/* ── ACTION COLUMN ──────────────────────────────────────────── */
+.th-actions { width: 36px; }
+.td-actions {
+  padding: 0 8px; vertical-align: middle; text-align: center;
+}
+.delete-word-btn {
+  display: none; /* show on row hover */
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 1px solid var(--border2); background: transparent;
+  color: var(--text3); cursor: pointer; font-size: .65rem;
+  align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.delete-word-btn:hover { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+tbody tr:hover .delete-word-btn { display: flex; }
+
+/* ── INLINE EDIT ────────────────────────────────────────────── */
+.editable-cell { cursor: default; }
+.editable-cell:hover { background: var(--blue-dim); }
+.inline-edit-input {
+  background: var(--bg2); border: 1.5px solid var(--blue);
+  border-radius: 4px; color: var(--text);
+  font-family: var(--mono); font-size: .8rem;
+  padding: 2px 6px; width: 100%; min-width: 80px;
+  outline: none;
+}
+
+@media (max-width: 700px) {
+  .dash-header { flex-direction: column; }
+  .list-grid { grid-template-columns: 1fr; }
+  .list-name-display { max-width: 130px; }
+}

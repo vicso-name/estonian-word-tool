@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ lst.name }} — Eesti Sõnad</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  <script>
+    (function () {
+      var t = localStorage.getItem('eesti_theme_v1') || 'light';
+      document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : '');
+    })();
+  </script>
+</head>
+<body class="mode-read" id="body" data-total="{{ stats.total }}" data-list-id="{{ lst.id }}">
+
+  <!-- ─── TOPBAR ──────────────────────────────────────── -->
+  <header class="topbar">
+    <a href="{{ url_for('dashboard') }}" class="back-btn" title="К спискам">←</a>
+    <div class="topbar-divider"></div>
+
+    <!-- Editable list name -->
+    <span class="list-name-display" id="listNameDisplay"
+          onclick="startRename()" title="Нажми чтобы переименовать">{{ lst.name }}</span>
+    <input type="text" class="list-name-input hidden" id="listNameInput"
+           value="{{ lst.name }}" onblur="saveRename()" onkeydown="renameKeydown(event)" />
+
+    <div class="topbar-divider"></div>
+
+    <!-- Study mode -->
+    <div class="mode-pill" id="globalModePill">
+      <button class="mode-btn active" onclick="setGlobalMode('read', this)">📖 Читаю</button>
+      <button class="mode-btn" onclick="setGlobalMode('hide-ru', this)">🎯 Скрыть перевод</button>
+      <button class="mode-btn" onclick="setGlobalMode('hide-et', this)">🔤 Скрыть эстонский</button>
+    </div>
+
+    <div class="topbar-spacer"></div>
+
+    {% if stats.total > 0 %}
+    <div class="progress-badge">
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+      </div>
+      <span id="progressText" class="progress-count">0</span>
+      <span style="color:var(--text3)">/</span>
+      <span style="color:var(--text2)">{{ stats.total }}</span>
+    </div>
+    {% endif %}
+
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Сменить тему">🌙</button>
+  </header>
+
+  <!-- ─── FLASH ────────────────────────────────────────── -->
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <div class="flash-wrap">
+        {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+  {% if ekilex_client_error %}
+    <div class="flash-wrap"><div class="flash error">⚠️ {{ ekilex_client_error }}</div></div>
+  {% endif %}
+
+  <!-- ─── ADD WORDS PANEL ──────────────────────────────── -->
+  <div class="input-panel" id="addPanel">
+    <div class="input-inner">
+      <div class="add-panel-toggle" onclick="toggleAddPanel()">
+        <span id="addPanelLabel">＋ Добавить слова</span>
+        <span id="addPanelChevron" class="chevron">▾</span>
+      </div>
+      <div id="addPanelBody" class="add-panel-body hidden">
+        <form action="{{ url_for('add_words_to_list', list_id=lst.id) }}"
+              method="post" enctype="multipart/form-data">
+          <div class="input-grid">
+            <div>
+              <div class="input-label">Слова</div>
+              <textarea name="words" placeholder="olema, maja, suur&#10;по одному на строку или через запятую"></textarea>
+            </div>
+            <div class="input-actions">
+              <button type="submit" class="btn btn-primary">⚡ Обработать</button>
+            </div>
+          </div>
+          <div class="input-row2">
+            <label class="file-label" for="word_file">📎 Загрузить файл</label>
+            <input type="file" id="word_file" name="word_file" accept=".csv,.json" />
+            <span id="file-name"></span>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── STATS + EXPORT ──────────────────────────────── -->
+  {% if stats.total > 0 %}
+  <div style="border-bottom:1px solid var(--border);">
+    <div class="stats-bar">
+      <div class="stat-item"><div class="stat-dot total"></div>Всего: <span class="stat-val">{{ stats.total }}</span></div>
+      <div class="stat-sep">·</div>
+      <div class="stat-item"><div class="stat-dot ok"></div>Найдено: <span class="stat-val">{{ stats.ok }}</span></div>
+      {% if stats.error > 0 %}
+        <div class="stat-sep">·</div>
+        <div class="stat-item"><div class="stat-dot error"></div>Ошибок: <span class="stat-val">{{ stats.error }}</span></div>
+      {% endif %}
+      <div class="stats-spacer"></div>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('export_csv', list_id=lst.id) }}">↓ CSV</a>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('export_json', list_id=lst.id) }}">↓ JSON</a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ─── RESULTS ─────────────────────────────────────── -->
+  {% if grouped %}
+  <div class="results">
+
+    {% for group_key, group_label in pos_labels.items() %}
+    {% set group_words = grouped.get(group_key, []) %}
+    {% if group_words %}
+
+    <div class="section" id="sec-{{ group_key }}" data-section-mode="inherit">
+      <div class="section-header">
+        <span class="section-icon">{{ pos_icons[group_key] }}</span>
+        <span class="section-title">{{ group_label }}</span>
+        <span class="section-count">{{ group_words|length }}</span>
+        <span class="section-progress" id="sp-{{ group_key }}">0 / {{ group_words|length }}</span>
+        <div class="section-mode-toggle">
+          <button class="sec-btn" onclick="setSectionMode('{{ group_key }}','read',this)">📖</button>
+          <button class="sec-btn" onclick="setSectionMode('{{ group_key }}','hide-ru',this)">🎯</button>
+          <button class="sec-btn" onclick="setSectionMode('{{ group_key }}','hide-et',this)">🔤</button>
+        </div>
+        <button class="reveal-all-btn" onclick="revealAll('sec-{{ group_key }}')">Показать всё</button>
+      </div>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Слово</th>
+              <th>Перевод</th>
+              {% if group_key in ('nouns','adjectives','pronouns') %}
+                <th>Nimetav</th><th>Omastav</th><th>Osastav</th>
+              {% elif group_key == 'verbs' %}
+                <th>ma-inf</th><th>da-inf</th>
+                <th>3sg pres</th><th>3sg past</th>
+                <th>-nud</th><th>Imper. 2sg</th><th>Extra</th>
+              {% endif %}
+              <th>Заметка</th>
+              <th class="th-actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in group_words %}
+            <tr class="word-row {% if row.status == 'error' %}row-error{% endif %}"
+                data-word="{{ row.lemma }}" data-word-id="{{ row.id }}" id="word-{{ row.id }}">
+
+              <!-- STATUS + WORD -->
+              <td class="word-cell">
+                <div class="word-cell-inner">
+                  <div class="word-status">
+                    <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
+                    {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
+                  </div>
+                  <span class="word-main">{{ row.lemma }}</span>
+                </div>
+              </td>
+
+              <!-- TRANSLATION (editable) -->
+              <td class="data-cell ru cell-ru editable-cell"
+                  data-field="translation" data-word-id="{{ row.id }}">
+                <span class="maskable cell-value">{{ row.translation or '' }}</span>
+                <div class="reveal-hint">нажми</div>
+              </td>
+
+              {% if row.status == 'error' %}
+                <td class="data-cell error-cell" colspan="{% if group_key in ('nouns','adjectives','pronouns') %}4{% elif group_key == 'verbs' %}8{% else %}2{% endif %}">
+                  {{ row.note or row.error or 'Ошибка' }}
+                </td>
+              {% else %}
+                {% if group_key in ('nouns','adjectives','pronouns') %}
+                  <td class="data-cell et cell-et editable-cell" data-field="nimetav" data-word-id="{{ row.id }}"><span class="maskable cell-value">{{ row.nimetav or '' }}</span><div class="reveal-hint">нажми</div></td>
+                  <td class="data-cell et cell-et editable-cell" data-field="omastav" data-word-id="{{ row.id }}"><span class="maskable cell-value">{{ row.omastav or '' }}</span></td>
+                  <td class="data-cell et cell-et editable-cell" data-field="osastav" data-word-id="{{ row.id }}"><span class="maskable cell-value">{{ row.osastav or '' }}</span></td>
+                {% elif group_key == 'verbs' %}
+                  <td class="data-cell et cell-et editable-cell" data-field="ma_inf"   data-word-id="{{ row.id }}"><span class="maskable cell-value">{{ row.ma_inf or '' }}</span><div class="reveal-hint">нажми</div></td>
+                  <td class="data-cell et cell-et editable-cell" data-field="da_inf"   data-word-id="{{ row.id }}"><span class="maskable cell-value">{{ row.da_inf or '' }}</span></td>
+                  <td class="data-cell et cell-et editable-cell" data-field="pres_3sg" data-word-id="{{ row.id }}"><span class="maskable cell-value">{{ row.pres_3sg or '' }}</span></td>
+                  <td class="data-cell et cell-et editable-cell" data-field="past_3sg" data-word-id="{{ row.id }}"><span class="maskable cell-value">{{ row.past_3sg or '' }}</span></td>
+                  <td class="data-cell et cell-et editable-cell" data-field="nud_form" data-word-id="{{ row.id }}"><span class="maskable cell-value">{{ row.nud_form or '' }}</span></td>
+                  <td class="data-cell et cell-et editable-cell" data-field="imper_2sg" data-word-id="{{ row.id }}"><span class="maskable cell-value">{{ row.imper_2sg or '' }}</span></td>
+                  <td class="data-cell et cell-et editable-cell" data-field="extra_form" data-word-id="{{ row.id }}"><span class="maskable cell-value">{{ row.extra_form or '' }}</span></td>
+                {% endif %}
+                <td class="data-cell note editable-cell" data-field="note" data-word-id="{{ row.id }}">
+                  <span class="cell-value">{{ row.note or '' }}</span>
+                </td>
+              {% endif %}
+
+              <!-- DELETE -->
+              <td class="td-actions">
+                <button class="delete-word-btn" onclick="deleteWord({{ row.id }}, this)"
+                        title="Удалить слово">✕</button>
+              </td>
+
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% endif %}
+    {% endfor %}
+
+  </div>
+
+  {% else %}
+  <div style="max-width:1180px;margin:0 auto;padding:20px;">
+    <div class="empty-state">
+      <div class="empty-icon">🇪🇪</div>
+      <div class="empty-title">Список пуст</div>
+      <div class="empty-sub">Нажми «Добавить слова» выше чтобы начать</div>
+    </div>
+  </div>
+  {% endif %}
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script>
+    const LIST_ID = document.body.dataset.listId;
+
+    /* ── RENAME ─────────────────────── */
+    function startRename() {
+      document.getElementById('listNameDisplay').classList.add('hidden');
+      const inp = document.getElementById('listNameInput');
+      inp.classList.remove('hidden');
+      inp.focus(); inp.select();
+    }
+    function renameKeydown(e) {
+      if (e.key === 'Enter') e.target.blur();
+      if (e.key === 'Escape') {
+        document.getElementById('listNameInput').classList.add('hidden');
+        document.getElementById('listNameDisplay').classList.remove('hidden');
+      }
+    }
+    function saveRename() {
+      const inp   = document.getElementById('listNameInput');
+      const disp  = document.getElementById('listNameDisplay');
+      const name  = inp.value.trim();
+      inp.classList.add('hidden');
+      disp.classList.remove('hidden');
+      if (!name || name === disp.textContent.trim()) return;
+      fetch(`/list/${LIST_ID}/rename`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `name=${encodeURIComponent(name)}`,
+      }).then(r => r.json()).then(d => {
+        if (d.ok) { disp.textContent = d.name; document.title = d.name + ' — Eesti Sõnad'; }
+      });
+    }
+
+    /* ── ADD PANEL ──────────────────── */
+    let panelOpen = false;
+    function toggleAddPanel() {
+      panelOpen = !panelOpen;
+      document.getElementById('addPanelBody').classList.toggle('hidden', !panelOpen);
+      document.getElementById('addPanelChevron').textContent = panelOpen ? '▴' : '▾';
+    }
+    // Auto-open if list is empty
+    {% if not grouped %}
+    toggleAddPanel();
+    {% endif %}
+
+    /* ── DELETE WORD ────────────────── */
+    function deleteWord(wordId, btn) {
+      if (!confirm('Удалить это слово из списка?')) return;
+      fetch(`/list/${LIST_ID}/word/${wordId}/delete`, { method: 'POST' })
+        .then(r => r.json())
+        .then(d => {
+          if (d.ok) {
+            const row = document.getElementById('word-' + wordId);
+            if (row) {
+              row.style.transition = 'opacity .25s';
+              row.style.opacity = '0';
+              setTimeout(() => row.remove(), 250);
+            }
+          }
+        });
+    }
+
+    /* ── INLINE EDIT ────────────────── */
+    document.addEventListener('dblclick', function (e) {
+      const cell = e.target.closest('.editable-cell');
+      if (!cell) return;
+      // Don't activate if in study-hide mode (cell might be masked)
+      const maskable = cell.querySelector('.maskable');
+      if (maskable && maskable.style.filter) return;
+
+      const field  = cell.dataset.field;
+      const wordId = cell.dataset.wordId;
+      const val    = cell.querySelector('.cell-value');
+      if (!val || cell.querySelector('input')) return;
+
+      const current = val.textContent.trim();
+      const inp = document.createElement('input');
+      inp.type  = 'text';
+      inp.value = current;
+      inp.className = 'inline-edit-input';
+
+      val.replaceWith(inp);
+      inp.focus(); inp.select();
+
+      function commit() {
+        const newVal = inp.value.trim();
+        const span = document.createElement('span');
+        span.className = 'cell-value';
+        span.textContent = newVal;
+        inp.replaceWith(span);
+
+        if (newVal === current) return;
+        fetch(`/list/${LIST_ID}/word/${wordId}/update`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ field, value: newVal }),
+        }).then(r => r.json()).then(d => {
+          if (!d.ok) { span.textContent = current; } // revert on error
+        });
+      }
+
+      inp.addEventListener('blur', commit);
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') inp.blur();
+        if (e.key === 'Escape') { inp.value = current; inp.blur(); }
+      });
+    });
+  </script>
+</body>
+</html>
