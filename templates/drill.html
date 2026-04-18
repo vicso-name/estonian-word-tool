@@ -27,7 +27,7 @@
     <div class="drill-progress-wrap">
       <div class="drill-progress-bar">
         <div class="drill-progress-fill" id="progressFill"
-             style="width: {{ (drill.current / drill.total * 100)|round|int }}%"></div>
+             data-pct="{{ (drill.current / drill.total * 100)|round|int if drill.total else 0 }}"></div>
       </div>
       <span class="drill-progress-label">{{ drill.current }} / {{ drill.total }}</span>
     </div>
@@ -172,6 +172,11 @@
 
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>
   <script>
+    // Apply data-pct → style.width for all progress bars
+    document.querySelectorAll('[data-pct]').forEach(el => {
+      el.style.width = el.dataset.pct + '%';
+    });
+
     // Focus answer input on page load
     const inp = document.getElementById('answerInput');
     if (inp) inp.focus();
