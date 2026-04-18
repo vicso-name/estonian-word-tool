@@ -3,250 +3,1066 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Estonian Word Tool</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <title>Eesti Sõnad</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── DESIGN TOKENS ───────────────────────────────── */
+    :root {
+      --blue:         #185FA5;
+      --blue-l:       #2478c8;
+      --blue-xl:      #5ba3e8;
+      --blue-dim:     rgba(24,95,165,.15);
+      --blue-border:  rgba(24,95,165,.35);
+      --bg:           #080d14;
+      --bg2:          #0e1520;
+      --bg3:          #131e2e;
+      --surface:      #182435;
+      --surface2:     #1f2f44;
+      --border:       rgba(255,255,255,.07);
+      --border2:      rgba(255,255,255,.12);
+      --text:         #dde6f0;
+      --text2:        #7d9ab8;
+      --text3:        #4a6480;
+      --green:        #34d399;
+      --green-dim:    rgba(52,211,153,.12);
+      --amber:        #fbbf24;
+      --amber-dim:    rgba(251,191,36,.12);
+      --red:          #f87171;
+      --red-dim:      rgba(248,113,113,.10);
+      --r:            10px;
+      --r-sm:         7px;
+      --mono:         'JetBrains Mono', monospace;
+      --sans:         'Sora', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg2); }
+    ::-webkit-scrollbar-thumb { background: var(--blue-dim); border-radius: 99px; }
+
+    /* ── TOPBAR ──────────────────────────────────────── */
+    .topbar {
+      position: sticky; top: 0; z-index: 200;
+      height: 56px;
+      background: rgba(8,13,20,.88);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px;
+      padding: 0 20px;
+    }
+    .topbar-logo {
+      font-size: .92rem; font-weight: 700; letter-spacing: -.02em;
+      color: var(--text); display: flex; align-items: center; gap: 6px;
+      flex-shrink: 0;
+    }
+    .topbar-logo .et { color: var(--blue-xl); }
+    .topbar-divider { width: 1px; height: 20px; background: var(--border2); flex-shrink: 0; }
+    .topbar-spacer { flex: 1; }
+
+    /* study mode pill */
+    .mode-pill {
+      display: flex; align-items: center;
+      background: var(--bg3); border: 1px solid var(--border2);
+      border-radius: 99px; padding: 3px; gap: 2px;
+    }
+    .mode-btn {
+      padding: 5px 13px; border-radius: 99px; border: none;
+      font-family: var(--sans); font-size: .72rem; font-weight: 600;
+      cursor: pointer; transition: all .18s;
+      color: var(--text2); background: transparent;
+      white-space: nowrap; user-select: none;
+    }
+    .mode-btn.active {
+      background: var(--blue); color: #fff;
+      box-shadow: 0 2px 10px rgba(24,95,165,.45);
+    }
+    .mode-btn:hover:not(.active) { color: var(--text); }
+
+    /* progress badge */
+    .progress-badge {
+      display: flex; align-items: center; gap: 6px;
+      font-size: .72rem; color: var(--text2); flex-shrink: 0;
+    }
+    .progress-bar-wrap {
+      width: 72px; height: 4px; background: var(--surface2);
+      border-radius: 99px; overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%; background: var(--green);
+      border-radius: 99px; transition: width .4s ease;
+    }
+    .progress-count { font-weight: 600; color: var(--green); }
+
+    /* ── FLASH ───────────────────────────────────────── */
+    .flash-wrap { padding: 10px 20px 0; }
+    .flash {
+      background: var(--blue-dim); border: 1px solid var(--blue-border);
+      border-radius: var(--r-sm); padding: 9px 14px;
+      font-size: .8rem; color: var(--blue-xl); margin-bottom: 6px;
+    }
+    .flash.error {
+      background: var(--red-dim); border-color: var(--red);
+      color: var(--red);
+    }
+
+    /* ── INPUT PANEL ─────────────────────────────────── */
+    .input-panel {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 20px;
+    }
+    .input-inner { max-width: 1180px; margin: 0 auto; }
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px; align-items: start;
+    }
+    .input-label {
+      font-size: .72rem; font-weight: 600; color: var(--text2);
+      text-transform: uppercase; letter-spacing: .06em;
+      margin-bottom: 6px;
+    }
+    textarea {
+      width: 100%;
+      background: var(--bg3); border: 1px solid var(--border2);
+      border-radius: var(--r-sm); color: var(--text);
+      font-family: var(--mono); font-size: .8rem;
+      padding: 9px 12px; resize: vertical; min-height: 60px;
+      transition: border-color .18s;
+    }
+    textarea:focus { outline: none; border-color: var(--blue); }
+    textarea::placeholder { color: var(--text3); }
+
+    .input-actions { display: flex; flex-direction: column; gap: 6px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 6px; padding: 9px 16px; border-radius: var(--r-sm); border: none;
+      font-family: var(--sans); font-size: .78rem; font-weight: 600;
+      cursor: pointer; transition: all .18s; text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-primary:hover { background: var(--blue-l); box-shadow: 0 4px 14px rgba(24,95,165,.4); }
+    .btn-ghost {
+      background: var(--surface); color: var(--text2);
+      border: 1px solid var(--border2);
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--border2); background: var(--surface2); }
+    .btn-danger {
+      background: transparent; color: var(--text3);
+      border: 1px solid var(--border);
+      font-size: .72rem; padding: 6px 12px;
+    }
+    .btn-danger:hover { color: var(--red); border-color: var(--red); }
+
+    .input-row2 {
+      display: flex; align-items: center; gap: 8px;
+      margin-top: 10px; flex-wrap: wrap;
+    }
+    .file-label {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: var(--r-sm);
+      background: var(--surface); border: 1px solid var(--border2);
+      font-size: .75rem; font-weight: 600; color: var(--text2);
+      cursor: pointer; transition: all .18s;
+    }
+    .file-label:hover { color: var(--text); }
+    input[type="file"] { display: none; }
+    #file-name { font-size: .72rem; color: var(--text3); }
+
+    /* ── STATS BAR ───────────────────────────────────── */
+    .stats-bar {
+      max-width: 1180px; margin: 0 auto;
+      padding: 14px 20px;
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    }
+    .stat-item {
+      display: flex; align-items: center; gap: 6px;
+      font-size: .75rem; color: var(--text2);
+    }
+    .stat-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .stat-dot.ok { background: var(--green); }
+    .stat-dot.error { background: var(--red); }
+    .stat-dot.total { background: var(--blue-xl); }
+    .stat-val { font-weight: 700; color: var(--text); }
+    .stat-sep { color: var(--border2); }
+    .stats-spacer { flex: 1; }
+    .timestamp { font-size: .7rem; color: var(--text3); }
+
+    /* ── RESULTS AREA ────────────────────────────────── */
+    .results { max-width: 1180px; margin: 0 auto; padding: 20px; }
+
+    /* ── SECTION ─────────────────────────────────────── */
+    .section {
+      margin-bottom: 32px;
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      overflow: hidden;
+      background: var(--bg2);
+    }
+    .section-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg3);
+    }
+    .section-icon { font-size: 1.1rem; }
+    .section-title { font-size: .88rem; font-weight: 700; flex: 1; }
+    .section-count {
+      font-size: .72rem; font-weight: 600;
+      background: var(--blue-dim); color: var(--blue-xl);
+      border: 1px solid var(--blue-border);
+      padding: 2px 9px; border-radius: 99px;
+    }
+    .section-progress {
+      font-size: .7rem; color: var(--text3);
+      font-family: var(--mono);
+    }
+    /* per-section mode toggle */
+    .section-mode-toggle {
+      display: flex; gap: 4px;
+    }
+    .sec-btn {
+      padding: 4px 10px; border-radius: 99px; border: none;
+      font-family: var(--sans); font-size: .68rem; font-weight: 600;
+      cursor: pointer; transition: all .15s;
+      color: var(--text3); background: var(--surface);
+      white-space: nowrap;
+    }
+    .sec-btn.active { background: var(--blue); color: #fff; }
+    .sec-btn:hover:not(.active) { color: var(--text2); }
+
+    /* ── TABLE ───────────────────────────────────────── */
+    .table-scroll { overflow-x: auto; }
+    table {
+      width: 100%; border-collapse: collapse;
+      font-size: .8rem;
+    }
+    thead th {
+      padding: 9px 14px;
+      text-align: left;
+      font-size: .67rem; font-weight: 600;
+      color: var(--text3); text-transform: uppercase;
+      letter-spacing: .07em;
+      background: var(--bg3);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    thead th:first-child { padding-left: 18px; min-width: 160px; }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background .12s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,.02); }
+
+    /* Word column — acts as row header */
+    td.word-cell {
+      padding: 12px 14px 12px 18px;
+      vertical-align: top;
+    }
+    .word-main {
+      font-weight: 700; font-size: .9rem;
+      color: var(--text); letter-spacing: -.01em;
+      font-family: var(--mono);
+      display: block;
+    }
+    .word-level {
+      display: inline-block; margin-top: 3px;
+      font-size: .62rem; font-weight: 700;
+      padding: 1px 7px; border-radius: 99px;
+      background: var(--amber-dim); color: var(--amber);
+      border: 1px solid rgba(251,191,36,.25);
+      letter-spacing: .05em;
+    }
+
+    /* Learned button */
+    .learned-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 20px; height: 20px; border-radius: 50%;
+      border: 1.5px solid var(--border2);
+      background: transparent; cursor: pointer;
+      transition: all .18s; flex-shrink: 0;
+      font-size: .65rem; color: var(--text3);
+      margin-left: 4px; vertical-align: middle;
+    }
+    .learned-btn:hover { border-color: var(--green); color: var(--green); }
+    .learned-btn.is-learned {
+      background: var(--green-dim); border-color: var(--green);
+      color: var(--green);
+    }
+    .word-row.is-learned .word-main {
+      text-decoration: line-through;
+      opacity: .55;
+    }
+
+    /* Regular data cells */
+    td.data-cell {
+      padding: 12px 14px;
+      vertical-align: top;
+      white-space: nowrap;
+    }
+    td.data-cell.et { /* Estonian form cell */
+      font-family: var(--mono);
+      font-size: .8rem;
+      color: var(--text);
+    }
+    td.data-cell.ru { /* Russian translation */
+      color: var(--text2);
+      font-size: .8rem;
+    }
+    td.data-cell.note {
+      color: var(--text3); font-size: .72rem;
+      max-width: 200px; white-space: normal;
+    }
+    td.data-cell.error-cell {
+      color: var(--red); font-size: .72rem;
+    }
+
+    td.data-cell span.form-label {
+      display: block; font-size: .6rem; font-weight: 600;
+      color: var(--text3); text-transform: uppercase;
+      letter-spacing: .06em; margin-bottom: 2px;
+    }
+
+    /* Error rows */
+    tbody tr.row-error td { opacity: .55; }
+    tbody tr.row-error td.word-cell .word-main { color: var(--red); }
+
+    /* ── STUDY MODE: hide cells ──────────────────────── */
+    .maskable {
+      transition: filter .2s, opacity .2s;
+      cursor: default;
+    }
+    /* Global modes via body class */
+    body.mode-hide-ru .cell-ru .maskable,
+    body.mode-hide-et .cell-et .maskable {
+      filter: blur(5px);
+      opacity: .4;
+      cursor: pointer;
+      user-select: none;
+    }
+    /* Revealed */
+    body.mode-hide-ru .cell-ru .maskable.revealed,
+    body.mode-hide-et .cell-et .maskable.revealed {
+      filter: none; opacity: 1;
+    }
+    /* Section override: section has its own mode */
+    .section[data-section-mode="hide-ru"] .cell-ru .maskable,
+    .section[data-section-mode="hide-et"] .cell-et .maskable {
+      filter: blur(5px); opacity: .4; cursor: pointer;
+    }
+    .section[data-section-mode="hide-ru"] .cell-ru .maskable.revealed,
+    .section[data-section-mode="hide-et"] .cell-et .maskable.revealed {
+      filter: none; opacity: 1;
+    }
+    /* Section read override always shows */
+    .section[data-section-mode="read"] .cell-ru .maskable,
+    .section[data-section-mode="read"] .cell-et .maskable {
+      filter: none !important; opacity: 1 !important;
+    }
+
+    .reveal-hint {
+      display: none;
+      font-size: .6rem; color: var(--text3); margin-top: 3px;
+    }
+    body.mode-hide-ru .cell-ru .reveal-hint,
+    body.mode-hide-et .cell-et .reveal-hint,
+    .section[data-section-mode="hide-ru"] .cell-ru .reveal-hint,
+    .section[data-section-mode="hide-et"] .cell-et .reveal-hint {
+      display: block;
+    }
+    .section[data-section-mode="read"] .reveal-hint { display: none !important; }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center; padding: 60px 20px;
+      color: var(--text3);
+    }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 12px; opacity: .4; }
+    .empty-title { font-size: .95rem; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+    .empty-sub { font-size: .8rem; }
+
+    /* ── EMPTY CELL ──────────────────────────────────── */
+    .cell-dash { color: var(--text3); opacity: .4; }
+
+    /* ── REVEAL ALL PER SECTION ──────────────────────── */
+    .reveal-all-btn {
+      padding: 4px 10px; border-radius: var(--r-sm); border: none;
+      font-family: var(--sans); font-size: .68rem; font-weight: 600;
+      cursor: pointer; transition: all .15s;
+      color: var(--text3); background: var(--surface);
+    }
+    .reveal-all-btn:hover { color: var(--text2); }
+
+    /* ── RESPONSIVE ──────────────────────────────────── */
+    @media (max-width: 700px) {
+      .topbar { gap: 8px; }
+      .mode-btn { padding: 5px 9px; font-size: .66rem; }
+      .input-grid { grid-template-columns: 1fr; }
+      .input-actions { flex-direction: row; flex-wrap: wrap; }
+      .results { padding: 12px; }
+      .section-mode-toggle { display: none; }
+    }
+  </style>
 </head>
-<body>
-  <div class="page">
-    <div class="wrap wrap--hero">
-      <div class="hero-card">
-        <div class="hero-top">
-          <div class="hero-copy">
-            <div class="eyebrow">Учебный инструмент для эстонских слов</div>
-            <h1>Estonian Word Tool</h1>
-            <p class="subtitle">
-              Вставь список слов вручную. Сервис попробует получить формы из Ekilex,
-              определить часть речи и подготовить удобную структуру для учебы.
-            </p>
-          </div>
+<body class="mode-read" id="body" data-total="{{ stats.total }}">
 
-          <div class="hero-badge">
-            <div class="hero-badge-value">Что умеет сейчас</div>
-            <div class="hero-badge-note">
-              Существительные, прилагательные, глаголы и другие части речи с раздельным выводом.
-            </div>
-          </div>
-        </div>
+  <!-- ─── TOPBAR ─────────────────────────────────────── -->
+  <header class="topbar">
+    <div class="topbar-logo">
+      <span>🇪🇪</span>
+      Eesti <span class="et">Sõnad</span>
+    </div>
+    <div class="topbar-divider"></div>
 
-        {% with messages = get_flashed_messages() %}
-          {% if messages %}
-            {% for message in messages %}
-              <div class="flash">{{ message }}</div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
-
-        <div class="field-card">
-          <form action="{{ url_for('process_words') }}" method="post">
-            <label class="label" for="words">Список слов</label>
-            <textarea
-              id="words"
-              name="words"
-              placeholder="Вводи каждое слово с новой строки"
-            ></textarea>
-
-            <p class="hint">
-              По одному слову на строку. Можно вставлять и через запятую — если нормализация уже включена, список обработается корректно.
-            </p>
-
-            <div style="margin-top: 18px;">
-              <div class="label" style="margin-bottom: 10px;">Действия</div>
-              <div class="actions">
-                <button type="submit" class="btn-primary">Обработать слова</button>
-                <a class="btn btn-secondary" href="{{ url_for('export_csv') }}">Скачать CSV</a>
-                <a class="btn btn-secondary" href="{{ url_for('export_json') }}">Скачать JSON</a>
-              </div>
-            </div>
-          </form>
-
-          <div class="actions" style="margin-top: 12px;">
-            <form action="{{ url_for('clear_results') }}" method="post">
-              <button type="submit" class="btn-secondary">Очистить</button>
-            </form>
-          </div>
-
-          <div class="quick-notes">
-            <div class="chip">⚡ Быстрый внутренний инструмент</div>
-            <div class="chip">📚 Для учебных списков</div>
-            <div class="chip">🧩 Подготовка данных для CSV/JSON</div>
-          </div>
-        </div>
-      </div>
+    <!-- Global study mode -->
+    <div class="mode-pill" id="globalModePill">
+      <button class="mode-btn active" data-mode="read" onclick="setGlobalMode('read', this)">📖 Читаю</button>
+      <button class="mode-btn" data-mode="hide-ru" onclick="setGlobalMode('hide-ru', this)">🎯 Скрыть перевод</button>
+      <button class="mode-btn" data-mode="hide-et" onclick="setGlobalMode('hide-et', this)">🔤 Скрыть эстонский</button>
     </div>
 
+    <div class="topbar-spacer"></div>
+
+    <!-- Progress -->
     {% if grouped %}
-      <div class="results-wrap">
+    <div class="progress-badge" id="progressBadge">
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+      </div>
+      <span id="progressText" class="progress-count">0</span>
+      <span style="color:var(--text3)">/</span>
+      <span id="progressTotal" style="color:var(--text2)">{{ stats.total }}</span>
+    </div>
+    {% endif %}
+  </header>
 
-        {% set nouns = grouped.get('nouns', []) %}
-        {% if nouns %}
-          <div class="table-card">
-            <h2>Существительные</h2>
-            <div class="count">Слов: {{ nouns|length }}</div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Lemma</th>
-                    <th>Перевод</th>
-                    <th>Nimetav</th>
-                    <th>Omastav</th>
-                    <th>Osastav</th>
-                    <th>Уровень</th>
-                    <th>Заметка</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for row in nouns %}
-                    <tr>
-                      <td>{{ row.lemma }}</td>
-                      <td>{{ row.translation_ru or row.translation or '' }}</td>
-                      <td>{{ row.nimetav or '' }}</td>
-                      <td>{{ row.omastav or '' }}</td>
-                      <td>{{ row.osastav or '' }}</td>
-                      <td>
-                        {% set lvl = row.proficiency_level or row.level %}
-                        {% if lvl %}
-                          <span class="level-badge">{{ lvl }}</span>
-                        {% endif %}
-                      </td>
-                      <td class="note-cell">{{ row.notes or row.note or '' }}</td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        {% endif %}
-
-        {% set adjectives = grouped.get('adjectives', []) %}
-        {% if adjectives %}
-          <div class="table-card">
-            <h2>Прилагательные</h2>
-            <div class="count">Слов: {{ adjectives|length }}</div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Lemma</th>
-                    <th>Перевод</th>
-                    <th>Nimetav</th>
-                    <th>Omastav</th>
-                    <th>Osastav</th>
-                    <th>Уровень</th>
-                    <th>Заметка</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for row in adjectives %}
-                    <tr>
-                      <td>{{ row.lemma }}</td>
-                      <td>{{ row.translation_ru or row.translation or '' }}</td>
-                      <td>{{ row.nimetav or '' }}</td>
-                      <td>{{ row.omastav or '' }}</td>
-                      <td>{{ row.osastav or '' }}</td>
-                      <td>
-                        {% set lvl = row.proficiency_level or row.level %}
-                        {% if lvl %}
-                          <span class="level-badge">{{ lvl }}</span>
-                        {% endif %}
-                      </td>
-                      <td class="note-cell">{{ row.notes or row.note or '' }}</td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        {% endif %}
-
-        {% set verbs = grouped.get('verbs', []) %}
-        {% if verbs %}
-          <div class="table-card">
-            <h2>Глаголы</h2>
-            <div class="count">Слов: {{ verbs|length }}</div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Lemma</th>
-                    <th>Перевод</th>
-                    <th>ma-inf</th>
-                    <th>da-inf</th>
-                    <th>vat/extra</th>
-                    <th>3sg pres</th>
-                    <th>3sg past</th>
-                    <th>-nud</th>
-                    <th>Imper 2sg</th>
-                    <th>Уровень</th>
-                    <th>Заметка</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for row in verbs %}
-                    <tr>
-                      <td>{{ row.lemma }}</td>
-                      <td>{{ row.translation_ru or row.translation or '' }}</td>
-                      <td>{{ row.ma_infinitive or row.ma_inf or '' }}</td>
-                      <td>{{ row.da_infinitive or row.da_inf or '' }}</td>
-                      <td>{{ row.vat_infinitive or row.extra_form or '' }}</td>
-                      <td>{{ row.present_3sg or row.pres_3sg or '' }}</td>
-                      <td>{{ row.past_3sg or '' }}</td>
-                      <td>{{ row.nud_participle or row.nud_form or '' }}</td>
-                      <td>{{ row.imperative_2sg or row.imper_2sg or '' }}</td>
-                      <td>
-                        {% set lvl = row.proficiency_level or row.level %}
-                        {% if lvl %}
-                          <span class="level-badge">{{ lvl }}</span>
-                        {% endif %}
-                      </td>
-                      <td class="note-cell">{{ row.notes or row.note or '' }}</td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        {% endif %}
-
-        {% set other = grouped.get('other', []) %}
-        {% if other %}
-          <div class="table-card">
-            <h2>Другие</h2>
-            <div class="count">Слов: {{ other|length }}</div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Lemma</th>
-                    <th>Перевод</th>
-                    <th>Часть речи</th>
-                    <th>Уровень</th>
-                    <th>Заметка</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for row in other %}
-                    <tr>
-                      <td>{{ row.lemma }}</td>
-                      <td>{{ row.translation_ru or row.translation or '' }}</td>
-                      <td>{{ row.part_of_speech or '' }}</td>
-                      <td>
-                        {% set lvl = row.proficiency_level or row.level %}
-                        {% if lvl %}
-                          <span class="level-badge">{{ lvl }}</span>
-                        {% endif %}
-                      </td>
-                      <td class="note-cell">{{ row.notes or row.note or '' }}</td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        {% endif %}
-
+  <!-- ─── FLASH MESSAGES ─────────────────────────────── -->
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <div class="flash-wrap">
+        {% for message in messages %}
+          <div class="flash">{{ message }}</div>
+        {% endfor %}
       </div>
     {% endif %}
+  {% endwith %}
+
+  {% if ekilex_client_error %}
+    <div class="flash-wrap">
+      <div class="flash error">⚠️ {{ ekilex_client_error }}</div>
+    </div>
+  {% endif %}
+
+  <!-- ─── INPUT PANEL ────────────────────────────────── -->
+  <div class="input-panel">
+    <div class="input-inner">
+      <form action="{{ url_for('process_words') }}" method="post" enctype="multipart/form-data" id="mainForm">
+        <div class="input-grid">
+          <div>
+            <div class="input-label">Слова для поиска</div>
+            <textarea name="words" id="words"
+              placeholder="olema, maja, suur&#10;по одному на строку или через запятую"></textarea>
+          </div>
+          <div class="input-actions">
+            <button type="submit" class="btn btn-primary">⚡ Обработать</button>
+            {% if stats.total > 0 %}
+              <a class="btn btn-ghost" href="{{ url_for('export_csv') }}">↓ CSV</a>
+              <a class="btn btn-ghost" href="{{ url_for('export_json') }}">↓ JSON</a>
+            {% endif %}
+          </div>
+        </div>
+        <div class="input-row2">
+          <label class="file-label" for="word_file">
+            📎 Загрузить файл
+          </label>
+          <input type="file" id="word_file" name="word_file" accept=".csv,.json"
+            onchange="document.getElementById('file-name').textContent = this.files[0]?.name || ''">
+          <span id="file-name"></span>
+          {% if stats.total > 0 %}
+            <form action="{{ url_for('clear_results') }}" method="post" style="margin-left:auto">
+              <button type="submit" class="btn btn-danger">✕ Очистить</button>
+            </form>
+          {% endif %}
+        </div>
+      </form>
+    </div>
   </div>
+
+  <!-- ─── RESULTS ────────────────────────────────────── -->
+  {% if grouped %}
+  <div style="background:var(--bg); border-bottom:1px solid var(--border);">
+    <div class="stats-bar">
+      <div class="stat-item">
+        <div class="stat-dot total"></div>
+        Всего: <span class="stat-val">{{ stats.total }}</span>
+      </div>
+      <div class="stat-sep">·</div>
+      <div class="stat-item">
+        <div class="stat-dot ok"></div>
+        Найдено: <span class="stat-val">{{ stats.ok }}</span>
+      </div>
+      {% if stats.error > 0 %}
+        <div class="stat-sep">·</div>
+        <div class="stat-item">
+          <div class="stat-dot error"></div>
+          Ошибок: <span class="stat-val">{{ stats.error }}</span>
+        </div>
+      {% endif %}
+      <div class="stats-spacer"></div>
+      {% if last_processed_at %}
+        <div class="timestamp">{{ last_processed_at[:16].replace('T',' ') }} UTC</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="results">
+
+    {# ── NOUNS ──────────────────────────────────────── #}
+    {% set nouns = grouped.get('nouns', []) %}
+    {% if nouns %}
+    <div class="section" id="sec-nouns" data-section-mode="inherit">
+      <div class="section-header">
+        <span class="section-icon">🏠</span>
+        <span class="section-title">Существительные</span>
+        <span class="section-count">{{ nouns|length }}</span>
+        <span class="section-progress" id="sp-nouns">0 / {{ nouns|length }}</span>
+        <div class="section-mode-toggle">
+          <button class="sec-btn" onclick="setSectionMode('nouns','read',this)">📖</button>
+          <button class="sec-btn" onclick="setSectionMode('nouns','hide-ru',this)">🎯</button>
+          <button class="sec-btn" onclick="setSectionMode('nouns','hide-et',this)">🔤</button>
+        </div>
+        <button class="reveal-all-btn" onclick="revealAll('sec-nouns')">Показать всё</button>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Слово</th>
+              <th>Перевод</th>
+              <th>Nimetav<br><small>именит.</small></th>
+              <th>Omastav<br><small>родит.</small></th>
+              <th>Osastav<br><small>частич.</small></th>
+              <th>Заметка</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in nouns %}
+            <tr class="word-row {% if row.status == 'error' %}row-error{% endif %}"
+                data-word="{{ row.lemma }}" id="row-{{ row.lemma | replace(' ','_') }}">
+              <td class="word-cell">
+                <span class="word-main">{{ row.lemma }}</span>
+                {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
+                <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')"
+                  title="Отметить как выученное">✓</button>
+              </td>
+              <td class="data-cell ru cell-ru">
+                <span class="maskable">{{ row.translation or '' }}</span>
+                <div class="reveal-hint">нажми чтобы раскрыть</div>
+              </td>
+              {% if row.status == 'error' %}
+                <td class="data-cell error-cell" colspan="4">{{ row.note or row.error or 'Ошибка' }}</td>
+              {% else %}
+                <td class="data-cell et cell-et">
+                  <span class="maskable">{{ row.nimetav or '' }}</span>
+                  <div class="reveal-hint">↑ нажми</div>
+                </td>
+                <td class="data-cell et cell-et">
+                  <span class="maskable">{{ row.omastav or '' }}</span>
+                </td>
+                <td class="data-cell et cell-et">
+                  <span class="maskable">{{ row.osastav or '' }}</span>
+                </td>
+                <td class="data-cell note">{{ row.note or '' }}</td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── ADJECTIVES ─────────────────────────────────── #}
+    {% set adjectives = grouped.get('adjectives', []) %}
+    {% if adjectives %}
+    <div class="section" id="sec-adjectives" data-section-mode="inherit">
+      <div class="section-header">
+        <span class="section-icon">🎨</span>
+        <span class="section-title">Прилагательные</span>
+        <span class="section-count">{{ adjectives|length }}</span>
+        <span class="section-progress" id="sp-adjectives">0 / {{ adjectives|length }}</span>
+        <div class="section-mode-toggle">
+          <button class="sec-btn" onclick="setSectionMode('adjectives','read',this)">📖</button>
+          <button class="sec-btn" onclick="setSectionMode('adjectives','hide-ru',this)">🎯</button>
+          <button class="sec-btn" onclick="setSectionMode('adjectives','hide-et',this)">🔤</button>
+        </div>
+        <button class="reveal-all-btn" onclick="revealAll('sec-adjectives')">Показать всё</button>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Слово</th>
+              <th>Перевод</th>
+              <th>Nimetav</th>
+              <th>Omastav</th>
+              <th>Osastav</th>
+              <th>Заметка</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in adjectives %}
+            <tr class="word-row {% if row.status == 'error' %}row-error{% endif %}"
+                data-word="{{ row.lemma }}">
+              <td class="word-cell">
+                <span class="word-main">{{ row.lemma }}</span>
+                {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
+                <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
+              </td>
+              <td class="data-cell ru cell-ru">
+                <span class="maskable">{{ row.translation or '' }}</span>
+                <div class="reveal-hint">нажми чтобы раскрыть</div>
+              </td>
+              {% if row.status == 'error' %}
+                <td class="data-cell error-cell" colspan="4">{{ row.note or row.error or 'Ошибка' }}</td>
+              {% else %}
+                <td class="data-cell et cell-et">
+                  <span class="maskable">{{ row.nimetav or '' }}</span>
+                  <div class="reveal-hint">↑ нажми</div>
+                </td>
+                <td class="data-cell et cell-et">
+                  <span class="maskable">{{ row.omastav or '' }}</span>
+                </td>
+                <td class="data-cell et cell-et">
+                  <span class="maskable">{{ row.osastav or '' }}</span>
+                </td>
+                <td class="data-cell note">{{ row.note or '' }}</td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── VERBS ──────────────────────────────────────── #}
+    {% set verbs = grouped.get('verbs', []) %}
+    {% if verbs %}
+    <div class="section" id="sec-verbs" data-section-mode="inherit">
+      <div class="section-header">
+        <span class="section-icon">⚡</span>
+        <span class="section-title">Глаголы</span>
+        <span class="section-count">{{ verbs|length }}</span>
+        <span class="section-progress" id="sp-verbs">0 / {{ verbs|length }}</span>
+        <div class="section-mode-toggle">
+          <button class="sec-btn" onclick="setSectionMode('verbs','read',this)">📖</button>
+          <button class="sec-btn" onclick="setSectionMode('verbs','hide-ru',this)">🎯</button>
+          <button class="sec-btn" onclick="setSectionMode('verbs','hide-et',this)">🔤</button>
+        </div>
+        <button class="reveal-all-btn" onclick="revealAll('sec-verbs')">Показать всё</button>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Слово</th>
+              <th>Перевод</th>
+              <th>ma-inf</th>
+              <th>da-inf</th>
+              <th>3sg pres</th>
+              <th>3sg past</th>
+              <th>-nud</th>
+              <th>Imper. 2sg</th>
+              <th>Extra</th>
+              <th>Заметка</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in verbs %}
+            <tr class="word-row {% if row.status == 'error' %}row-error{% endif %}"
+                data-word="{{ row.lemma }}">
+              <td class="word-cell">
+                <span class="word-main">{{ row.lemma }}</span>
+                {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
+                <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
+              </td>
+              <td class="data-cell ru cell-ru">
+                <span class="maskable">{{ row.translation or '' }}</span>
+                <div class="reveal-hint">нажми</div>
+              </td>
+              {% if row.status == 'error' %}
+                <td class="data-cell error-cell" colspan="8">{{ row.note or row.error or 'Ошибка' }}</td>
+              {% else %}
+                <td class="data-cell et cell-et">
+                  <span class="maskable">{{ row.ma_inf or '' }}</span>
+                </td>
+                <td class="data-cell et cell-et">
+                  <span class="maskable">{{ row.da_inf or '' }}</span>
+                </td>
+                <td class="data-cell et cell-et">
+                  <span class="maskable">{{ row.pres_3sg or '' }}</span>
+                </td>
+                <td class="data-cell et cell-et">
+                  <span class="maskable">{{ row.past_3sg or '' }}</span>
+                </td>
+                <td class="data-cell et cell-et">
+                  <span class="maskable">{{ row.nud_form or '' }}</span>
+                </td>
+                <td class="data-cell et cell-et">
+                  <span class="maskable">{{ row.imper_2sg or '' }}</span>
+                </td>
+                <td class="data-cell et cell-et">
+                  <span class="maskable">{{ row.extra_form or '' }}</span>
+                </td>
+                <td class="data-cell note">{{ row.note or '' }}</td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── ADVERBS ────────────────────────────────────── #}
+    {% set adverbs = grouped.get('adverbs', []) %}
+    {% if adverbs %}
+    <div class="section" id="sec-adverbs" data-section-mode="inherit">
+      <div class="section-header">
+        <span class="section-icon">🔷</span>
+        <span class="section-title">Наречия</span>
+        <span class="section-count">{{ adverbs|length }}</span>
+        <span class="section-progress" id="sp-adverbs">0 / {{ adverbs|length }}</span>
+        <div class="section-mode-toggle">
+          <button class="sec-btn" onclick="setSectionMode('adverbs','read',this)">📖</button>
+          <button class="sec-btn" onclick="setSectionMode('adverbs','hide-ru',this)">🎯</button>
+          <button class="sec-btn" onclick="setSectionMode('adverbs','hide-et',this)">🔤</button>
+        </div>
+        <button class="reveal-all-btn" onclick="revealAll('sec-adverbs')">Показать всё</button>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Слово</th>
+              <th>Перевод</th>
+              <th>Заметка</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in adverbs %}
+            <tr class="word-row {% if row.status == 'error' %}row-error{% endif %}"
+                data-word="{{ row.lemma }}">
+              <td class="word-cell">
+                <span class="word-main">{{ row.lemma }}</span>
+                {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
+                <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
+              </td>
+              <td class="data-cell ru cell-ru">
+                <span class="maskable">{{ row.translation or '' }}</span>
+                <div class="reveal-hint">нажми</div>
+              </td>
+              <td class="data-cell note">{{ row.note or '' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── PRONOUNS ───────────────────────────────────── #}
+    {% set pronouns = grouped.get('pronouns', []) %}
+    {% if pronouns %}
+    <div class="section" id="sec-pronouns" data-section-mode="inherit">
+      <div class="section-header">
+        <span class="section-icon">👤</span>
+        <span class="section-title">Местоимения</span>
+        <span class="section-count">{{ pronouns|length }}</span>
+        <span class="section-progress" id="sp-pronouns">0 / {{ pronouns|length }}</span>
+        <div class="section-mode-toggle">
+          <button class="sec-btn" onclick="setSectionMode('pronouns','read',this)">📖</button>
+          <button class="sec-btn" onclick="setSectionMode('pronouns','hide-ru',this)">🎯</button>
+          <button class="sec-btn" onclick="setSectionMode('pronouns','hide-et',this)">🔤</button>
+        </div>
+        <button class="reveal-all-btn" onclick="revealAll('sec-pronouns')">Показать всё</button>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Слово</th>
+              <th>Перевод</th>
+              <th>Nimetav</th>
+              <th>Omastav</th>
+              <th>Osastav</th>
+              <th>Заметка</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in pronouns %}
+            <tr class="word-row {% if row.status == 'error' %}row-error{% endif %}"
+                data-word="{{ row.lemma }}">
+              <td class="word-cell">
+                <span class="word-main">{{ row.lemma }}</span>
+                {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
+                <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
+              </td>
+              <td class="data-cell ru cell-ru">
+                <span class="maskable">{{ row.translation or '' }}</span>
+                <div class="reveal-hint">нажми</div>
+              </td>
+              {% if row.status == 'error' %}
+                <td class="data-cell error-cell" colspan="4">{{ row.note or row.error or 'Ошибка' }}</td>
+              {% else %}
+                <td class="data-cell et cell-et">
+                  <span class="maskable">{{ row.nimetav or '' }}</span>
+                </td>
+                <td class="data-cell et cell-et">
+                  <span class="maskable">{{ row.omastav or '' }}</span>
+                </td>
+                <td class="data-cell et cell-et">
+                  <span class="maskable">{{ row.osastav or '' }}</span>
+                </td>
+                <td class="data-cell note">{{ row.note or '' }}</td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── OTHER ──────────────────────────────────────── #}
+    {% set other = grouped.get('other', []) %}
+    {% if other %}
+    <div class="section" id="sec-other" data-section-mode="inherit">
+      <div class="section-header">
+        <span class="section-icon">📦</span>
+        <span class="section-title">Другие</span>
+        <span class="section-count">{{ other|length }}</span>
+        <span class="section-progress" id="sp-other">0 / {{ other|length }}</span>
+        <div class="section-mode-toggle">
+          <button class="sec-btn" onclick="setSectionMode('other','read',this)">📖</button>
+          <button class="sec-btn" onclick="setSectionMode('other','hide-ru',this)">🎯</button>
+          <button class="sec-btn" onclick="setSectionMode('other','hide-et',this)">🔤</button>
+        </div>
+        <button class="reveal-all-btn" onclick="revealAll('sec-other')">Показать всё</button>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Слово</th>
+              <th>Перевод</th>
+              <th>Часть речи</th>
+              <th>Заметка</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in other %}
+            <tr class="word-row {% if row.status == 'error' %}row-error{% endif %}"
+                data-word="{{ row.lemma }}">
+              <td class="word-cell">
+                <span class="word-main">{{ row.lemma }}</span>
+                {% if row.level %}<span class="word-level">{{ row.level }}</span>{% endif %}
+                <button class="learned-btn" onclick="toggleLearned('{{ row.lemma }}')" title="Выучено">✓</button>
+              </td>
+              <td class="data-cell ru cell-ru">
+                <span class="maskable">{{ row.translation or '' }}</span>
+                <div class="reveal-hint">нажми</div>
+              </td>
+              <td class="data-cell" style="color:var(--text3);font-size:.75rem;">{{ row.part_of_speech or '' }}</td>
+              <td class="data-cell note">{{ row.note or row.error or '' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>{# /results #}
+
+  {% else %}
+  <!-- Empty state -->
+  <div style="max-width:1180px;margin:0 auto;padding:20px;">
+    <div class="empty-state">
+      <div class="empty-icon">🇪🇪</div>
+      <div class="empty-title">Список слов пуст</div>
+      <div class="empty-sub">Введи слова выше и нажми «Обработать»</div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ─── JAVASCRIPT ─────────────────────────────────── -->
+  <script>
+    /* ── STORAGE KEY ─── */
+    const STORE_KEY = 'eesti_learned_v1';
+
+    /* ── Load learned words ─── */
+    function getLearnedSet() {
+      try { return new Set(JSON.parse(localStorage.getItem(STORE_KEY) || '[]')); }
+      catch { return new Set(); }
+    }
+    function saveLearnedSet(s) {
+      localStorage.setItem(STORE_KEY, JSON.stringify([...s]));
+    }
+
+    let learned = getLearnedSet();
+    const totalWords = parseInt(document.body.dataset.total || '0', 10);
+
+    /* ── Apply learned state on load ─── */
+    function applyLearnedState() {
+      document.querySelectorAll('.word-row').forEach(row => {
+        const word = row.dataset.word;
+        const btn = row.querySelector('.learned-btn');
+        if (learned.has(word)) {
+          row.classList.add('is-learned');
+          if (btn) btn.classList.add('is-learned');
+        }
+      });
+      updateProgress();
+      updateSectionProgress();
+    }
+
+    /* ── Toggle learned ─── */
+    function toggleLearned(word) {
+      if (learned.has(word)) {
+        learned.delete(word);
+      } else {
+        learned.add(word);
+      }
+      saveLearnedSet(learned);
+
+      // Update UI
+      document.querySelectorAll(`.word-row[data-word="${CSS.escape(word)}"]`).forEach(row => {
+        row.classList.toggle('is-learned', learned.has(word));
+        const btn = row.querySelector('.learned-btn');
+        if (btn) btn.classList.toggle('is-learned', learned.has(word));
+      });
+
+      updateProgress();
+      updateSectionProgress();
+    }
+
+    /* ── Progress bar ─── */
+    function updateProgress() {
+      if (!totalWords) return;
+      const count = learned.size;
+      const pct = Math.round((count / totalWords) * 100);
+      const fill = document.getElementById('progressFill');
+      const text = document.getElementById('progressText');
+      if (fill) fill.style.width = pct + '%';
+      if (text) text.textContent = count;
+    }
+
+    /* ── Section progress ─── */
+    const sectionIds = ['nouns','adjectives','verbs','adverbs','pronouns','other'];
+    function updateSectionProgress() {
+      sectionIds.forEach(id => {
+        const sec = document.getElementById('sec-' + id);
+        const sp = document.getElementById('sp-' + id);
+        if (!sec || !sp) return;
+        const rows = sec.querySelectorAll('.word-row');
+        const done = [...rows].filter(r => learned.has(r.dataset.word)).length;
+        sp.textContent = done + ' / ' + rows.length;
+        sp.style.color = done === rows.length && rows.length > 0
+          ? 'var(--green)' : 'var(--text3)';
+      });
+    }
+
+    /* ── GLOBAL STUDY MODE ─── */
+    let globalMode = 'read';
+    function setGlobalMode(mode, btn) {
+      globalMode = mode;
+      // Update body class
+      document.body.classList.remove('mode-read','mode-hide-ru','mode-hide-et');
+      document.body.classList.add('mode-' + mode);
+      // Update pill buttons
+      document.querySelectorAll('#globalModePill .mode-btn').forEach(b => {
+        b.classList.toggle('active', b === btn);
+      });
+      // When switching modes, un-reveal all
+      if (mode !== 'read') {
+        document.querySelectorAll('.maskable.revealed').forEach(el => {
+          // only un-reveal if section doesn't override
+          const sec = el.closest('.section');
+          if (!sec || sec.dataset.sectionMode === 'inherit') {
+            el.classList.remove('revealed');
+          }
+        });
+      }
+    }
+
+    /* ── PER-SECTION MODE ─── */
+    function setSectionMode(sectionId, mode, btn) {
+      const sec = document.getElementById('sec-' + sectionId);
+      if (!sec) return;
+      sec.dataset.sectionMode = mode;
+      // Update sec-btn active state within that section
+      const btns = sec.querySelectorAll('.sec-btn');
+      btns.forEach(b => b.classList.toggle('active', b === btn));
+      // Un-reveal when switching to hide mode
+      if (mode !== 'read') {
+        sec.querySelectorAll('.maskable.revealed').forEach(el => el.classList.remove('revealed'));
+      }
+    }
+
+    /* ── REVEAL on click ─── */
+    document.addEventListener('click', function(e) {
+      const maskable = e.target.closest('.maskable');
+      if (!maskable) return;
+
+      // Check if we're actually hiding (either global or section mode)
+      const cell = maskable.closest('.cell-ru, .cell-et');
+      if (!cell) return;
+
+      const isRu = cell.classList.contains('cell-ru');
+      const isEt = cell.classList.contains('cell-et');
+      const sec = maskable.closest('.section');
+      const secMode = sec ? sec.dataset.sectionMode : 'inherit';
+
+      const effectiveMode = secMode !== 'inherit' ? secMode : globalMode;
+
+      const shouldReveal =
+        (isRu && effectiveMode === 'hide-ru') ||
+        (isEt && effectiveMode === 'hide-et');
+
+      if (shouldReveal) {
+        maskable.classList.toggle('revealed');
+      }
+    });
+
+    /* ── REVEAL ALL for section ─── */
+    function revealAll(secId) {
+      const sec = document.getElementById(secId);
+      if (!sec) return;
+      const anyHidden = [...sec.querySelectorAll('.maskable')].some(m => !m.classList.contains('revealed'));
+      sec.querySelectorAll('.maskable').forEach(m => {
+        m.classList.toggle('revealed', anyHidden);
+      });
+    }
+
+    /* ── INIT ─── */
+    applyLearnedState();
+  </script>
 </body>
 </html>
