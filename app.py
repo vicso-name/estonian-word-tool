@@ -350,3 +350,150 @@ def parse_csv_words(file_bytes: bytes) -> List[str]:
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+
+# ── DRILL ROUTES ─────────────────────────────────────────────
+from drill_engine import build_session, get_summary, record_result, validate_answer
+from drill_templates import get_applicable_templates
+
+
+@app.route("/list/<int:list_id>/drill", methods=["GET"])
+def drill_start_page(list_id: int):
+    lst = get_list(list_id)
+    if not lst:
+        flash("Список не найден.")
+        return redirect(url_for("dashboard"))
+
+    words    = get_words(list_id)
+    ok_words = [w for w in words if w.get("status") != "error"]
+
+    # Estimate exercise count
+    estimate = 0
+    for w in ok_words:
+        applicable = get_applicable_templates(w)
+        estimate += min(len(applicable), 5)  # roughly
+    estimate = min(estimate, 40)
+
+    return render_template(
+        "drill_start.html",
+        lst=lst,
+        word_count=len(words),
+        ok_count=len(ok_words),
+        exercise_estimate=estimate,
+        has_api_key=bool(os.getenv("ANTHROPIC_API_KEY")),
+    )
+
+
+@app.route("/list/<int:list_id>/drill/start", methods=["POST"])
+def start_drill(list_id: int):
+    lst = get_list(list_id)
+    if not lst:
+        flash("Список не найден.")
+        return redirect(url_for("dashboard"))
+
+    words         = get_words(list_id)
+    grammar_topic = request.form.get("grammar_topic", "").strip()
+
+    drill = build_session(
+        words=words,
+        list_id=list_id,
+        list_name=lst["name"],
+        grammar_topic=grammar_topic,
+    )
+
+    if not drill["exercises"]:
+        flash("Недостаточно данных для дрилла. Убедись что слова имеют формы.")
+        return redirect(url_for("view_list", list_id=list_id))
+
+    session["drill"] = drill
+    session.modified = True
+    return redirect(url_for("drill_exercise", list_id=list_id))
+
+
+@app.route("/list/<int:list_id>/drill/exercise", methods=["GET"])
+def drill_exercise(list_id: int):
+    drill = session.get("drill")
+    if not drill or drill.get("list_id") != list_id:
+        return redirect(url_for("drill_start_page", list_id=list_id))
+
+    current = drill["current"]
+    exercises = drill["exercises"]
+
+    if current >= len(exercises):
+        return redirect(url_for("drill_finish", list_id=list_id))
+
+    exercise = exercises[current]
+
+    return render_template(
+        "drill.html",
+        drill=drill,
+        exercise=exercise,
+        feedback=None,
+    )
+
+
+@app.route("/list/<int:list_id>/drill/answer", methods=["POST"])
+def drill_answer(list_id: int):
+    drill = session.get("drill")
+    if not drill or drill.get("list_id") != list_id:
+        return redirect(url_for("drill_start_page", list_id=list_id))
+
+    current   = drill["current"]
+    exercises = drill["exercises"]
+
+    if current >= len(exercises):
+        return redirect(url_for("drill_finish", list_id=list_id))
+
+    exercise      = exercises[current]
+    student_input = request.form.get("answer", "").strip()
+
+    result = validate_answer(
+        exercise=exercise,
+        student_answer=student_input,
+        grammar_topic=drill.get("grammar_topic", ""),
+        use_ai=bool(os.getenv("ANTHROPIC_API_KEY")),
+    )
+
+    # Track attempts
+    exercise["attempts"] = exercise.get("attempts", 0) + 1
+    record_result(drill, exercise, result["verdict"], student_input)
+
+    session["drill"] = drill
+    session.modified = True
+
+    return render_template(
+        "drill.html",
+        drill=drill,
+        exercise=exercise,
+        feedback=result,
+    )
+
+
+@app.route("/list/<int:list_id>/drill/next", methods=["POST"])
+def drill_next(list_id: int):
+    drill = session.get("drill")
+    if not drill or drill.get("list_id") != list_id:
+        return redirect(url_for("drill_start_page", list_id=list_id))
+
+    drill["current"] = drill.get("current", 0) + 1
+    session["drill"] = drill
+    session.modified = True
+
+    if drill["current"] >= drill["total"]:
+        return redirect(url_for("drill_finish", list_id=list_id))
+
+    return redirect(url_for("drill_exercise", list_id=list_id))
+
+
+@app.route("/list/<int:list_id>/drill/finish", methods=["GET"])
+def drill_finish(list_id: int):
+    drill = session.get("drill")
+    if not drill:
+        return redirect(url_for("view_list", list_id=list_id))
+
+    summary = get_summary(drill)
+    return render_template(
+        "drill_summary.html",
+        drill=drill,
+        summary=summary,
+    )

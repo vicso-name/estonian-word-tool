@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Результаты — {{ drill.list_name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/drill.css') }}" />
+  <script>
+    (function () {
+      var t = localStorage.getItem('eesti_theme_v1') || 'light';
+      document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : '');
+    })();
+  </script>
+</head>
+<body>
+
+  <header class="drill-topbar">
+    <a href="{{ url_for('view_list', list_id=drill.list_id) }}" class="back-btn">←</a>
+    <div class="drill-meta">
+      <span class="drill-list-name">{{ drill.list_name }}</span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙</button>
+  </header>
+
+  <div class="drill-wrap">
+
+    <!-- BIG SCORE -->
+    <div class="summary-score-wrap">
+      <div class="summary-score
+        {% if summary.accuracy >= 80 %}score-great
+        {% elif summary.accuracy >= 50 %}score-ok
+        {% else %}score-poor{% endif %}">
+        {{ summary.accuracy }}%
+      </div>
+      <div class="summary-label">
+        {% if summary.accuracy >= 80 %}Отлично! 🎉
+        {% elif summary.accuracy >= 50 %}Неплохо, продолжай 💪
+        {% else %}Нужно повторить 📚{% endif %}
+      </div>
+      <div class="summary-duration">
+        ⏱ {{ (summary.duration // 60) }}м {{ (summary.duration % 60) }}с
+      </div>
+    </div>
+
+    <!-- STAT TILES -->
+    <div class="summary-stats">
+      <div class="summary-tile tile-correct">
+        <div class="tile-val">{{ summary.correct }}</div>
+        <div class="tile-lbl">Правильно</div>
+      </div>
+      <div class="summary-tile tile-partial">
+        <div class="tile-val">{{ summary.partial }}</div>
+        <div class="tile-lbl">Почти</div>
+      </div>
+      <div class="summary-tile tile-wrong">
+        <div class="tile-val">{{ summary.wrong }}</div>
+        <div class="tile-lbl">Ошибок</div>
+      </div>
+      <div class="summary-tile tile-total">
+        <div class="tile-val">{{ summary.total }}</div>
+        <div class="tile-lbl">Всего</div>
+      </div>
+    </div>
+
+    <!-- BY ROUND -->
+    {% if summary.by_round %}
+    <div class="summary-section">
+      <div class="summary-section-title">По раундам</div>
+      {% for rnd_num, rnd_data in summary.by_round.items()|sort %}
+      <div class="round-result-row">
+        <span class="round-badge round-{{ rnd_num }}" style="font-size:.72rem;padding:3px 10px;">
+          {% if rnd_num == 1 %}📖 Раунд 1
+          {% elif rnd_num == 2 %}🎯 Раунд 2
+          {% else %}⚡ Раунд 3{% endif %}
+        </span>
+        <div class="round-result-bar-wrap">
+          <div class="round-result-bar"
+               style="width:{{ (rnd_data.correct / rnd_data.total * 100)|round|int }}%"></div>
+        </div>
+        <span class="round-result-num">{{ rnd_data.correct }}/{{ rnd_data.total }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- HARD WORDS -->
+    {% if summary.hard_words %}
+    <div class="summary-section">
+      <div class="summary-section-title">⚠️ Эти слова требуют повторения</div>
+      <div class="hard-words-list">
+        {% for hw in summary.hard_words %}
+        <span class="hard-word-chip">
+          {{ hw.lemma }}
+          <span class="hard-word-count">×{{ hw.count }}</span>
+        </span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ACTIONS -->
+    <div class="summary-actions">
+      <a href="{{ url_for('start_drill', list_id=drill.list_id) }}"
+         class="btn btn-primary">🔁 Повторить урок</a>
+      <a href="{{ url_for('view_list', list_id=drill.list_id) }}"
+         class="btn btn-ghost">← К списку слов</a>
+    </div>
+
+  </div>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

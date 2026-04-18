@@ -12,7 +12,7 @@
     })();
   </script>
 </head>
-<body class="mode-read" id="body" data-total="{{ stats.total }}" data-list-id="{{ lst.id }}">
+<body class="mode-read" id="body" data-total="{{ stats.total }}" data-list-id="{{ lst.id }}" data-has-words="{{ '1' if grouped else '0' }}">
 
   <!-- ─── TOPBAR ──────────────────────────────────────── -->
   <header class="topbar">
@@ -105,6 +105,7 @@
       <div class="stats-spacer"></div>
       <a class="btn btn-ghost btn-sm" href="{{ url_for('export_csv', list_id=lst.id) }}">↓ CSV</a>
       <a class="btn btn-ghost btn-sm" href="{{ url_for('export_json', list_id=lst.id) }}">↓ JSON</a>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('drill_start_page', list_id=lst.id) }}">⚡ Учить</a>
     </div>
   </div>
   {% endif %}
@@ -196,7 +197,7 @@
 
               <!-- DELETE -->
               <td class="td-actions">
-                <button class="delete-word-btn" onclick="deleteWord({{ row.id }}, this)"
+                <button class="delete-word-btn" onclick="deleteWord(this)"
                         title="Удалить слово">✕</button>
               </td>
 
@@ -264,23 +265,20 @@
       document.getElementById('addPanelChevron').textContent = panelOpen ? '▴' : '▾';
     }
     // Auto-open if list is empty
-    {% if not grouped %}
-    toggleAddPanel();
-    {% endif %}
+    if (document.body.dataset.hasWords === '0') toggleAddPanel();
 
     /* ── DELETE WORD ────────────────── */
-    function deleteWord(wordId, btn) {
+    function deleteWord(btn) {
+      const row = btn.closest('tr');
+      const wordId = row.dataset.wordId;
       if (!confirm('Удалить это слово из списка?')) return;
       fetch(`/list/${LIST_ID}/word/${wordId}/delete`, { method: 'POST' })
         .then(r => r.json())
         .then(d => {
           if (d.ok) {
-            const row = document.getElementById('word-' + wordId);
-            if (row) {
-              row.style.transition = 'opacity .25s';
-              row.style.opacity = '0';
-              setTimeout(() => row.remove(), 250);
-            }
+            row.style.transition = 'opacity .25s';
+            row.style.opacity = '0';
+            setTimeout(() => row.remove(), 250);
           }
         });
     }

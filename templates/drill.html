@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Дрилл — {{ drill.list_name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/drill.css') }}" />
+  <script>
+    (function () {
+      var t = localStorage.getItem('eesti_theme_v1') || 'light';
+      document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : '');
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- ─── DRILL TOPBAR ─────────────────────────────────── -->
+  <header class="drill-topbar">
+    <a href="{{ url_for('view_list', list_id=drill.list_id) }}" class="back-btn" title="Выйти из урока">←</a>
+    <div class="drill-meta">
+      <span class="drill-list-name">{{ drill.list_name }}</span>
+      {% if drill.grammar_topic %}
+        <span class="drill-topic-badge">{{ drill.grammar_topic }}</span>
+      {% endif %}
+    </div>
+    <div class="drill-progress-wrap">
+      <div class="drill-progress-bar">
+        <div class="drill-progress-fill" id="progressFill"
+             style="width: {{ (drill.current / drill.total * 100)|round|int }}%"></div>
+      </div>
+      <span class="drill-progress-label">{{ drill.current }} / {{ drill.total }}</span>
+    </div>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙</button>
+  </header>
+
+  <!-- ─── MAIN EXERCISE AREA ───────────────────────────── -->
+  <div class="drill-wrap">
+
+    {% if exercise %}
+    <!-- ROUND BADGE -->
+    <div class="round-badge round-{{ exercise.round }}">
+      {% if exercise.round == 1 %}📖 Раунд 1 — Узнавание
+      {% elif exercise.round == 2 %}🎯 Раунд 2 — Формы
+      {% else %}⚡ Раунд 3 — Продукция
+      {% endif %}
+    </div>
+
+    <!-- EXERCISE CARD -->
+    <div class="exercise-card" id="exerciseCard">
+      <div class="exercise-prompt" id="exercisePrompt">
+        {{ exercise.prompt | safe }}
+      </div>
+
+      <!-- ANSWER FORM -->
+      <form method="post" action="{{ url_for('drill_answer', list_id=drill.list_id) }}"
+            id="answerForm" autocomplete="off">
+        <div class="answer-wrap">
+          <input
+            type="text"
+            name="answer"
+            id="answerInput"
+            class="answer-input"
+            placeholder="Напиши ответ по-эстонски..."
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+            autofocus
+          />
+          <button type="submit" class="btn btn-primary drill-submit-btn">
+            Проверить →
+          </button>
+        </div>
+      </form>
+
+      <!-- FEEDBACK (shown after submit via JS / page reload) -->
+      {% if feedback %}
+      <div class="feedback-wrap feedback-{{ feedback.verdict|lower }}" id="feedbackWrap">
+        <div class="feedback-header">
+          {% if feedback.verdict == 'CORRECT' %}
+            <span class="feedback-icon">✓</span> Правильно!
+          {% elif feedback.verdict == 'PARTIAL' %}
+            <span class="feedback-icon">≈</span> Почти!
+          {% else %}
+            <span class="feedback-icon">✗</span> Неправильно
+          {% endif %}
+          {% if feedback.used_ai %}
+            <span class="ai-badge" title="Проверено AI">AI</span>
+          {% endif %}
+        </div>
+
+        {% if feedback.verdict != 'CORRECT' %}
+        <div class="feedback-correct">
+          Правильный ответ: <b>{{ feedback.correct }}</b>
+        </div>
+        {% endif %}
+
+        {% if feedback.explanation %}
+        <div class="feedback-explanation">{{ feedback.explanation | safe }}</div>
+        {% endif %}
+
+        <!-- NEXT -->
+        <form method="post" action="{{ url_for('drill_next', list_id=drill.list_id) }}">
+          <button type="submit" class="btn btn-primary drill-next-btn">
+            {% if drill.current >= drill.total %}
+              Завершить урок →
+            {% else %}
+              Следующее →
+            {% endif %}
+          </button>
+        </form>
+      </div>
+      {% endif %}
+
+      <!-- HINT (shown on demand before submit) -->
+      {% if not feedback %}
+      <div class="hint-wrap" id="hintWrap">
+        <button type="button" class="hint-btn" id="hintBtn"
+                onclick="showHint()" data-hint="{{ exercise.hint | e }}">
+          💡 Подсказка
+        </button>
+        <div class="hint-text hidden" id="hintText"></div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- FORMS REFERENCE (collapsed by default) -->
+    {% if exercise.forms %}
+    <details class="forms-reference">
+      <summary>Все формы слова «{{ exercise.forms.get('lemma', '') }}»</summary>
+      <div class="forms-grid">
+        {% set form_labels = {
+          'translation': 'Перевод',
+          'nimetav':     'Nimetav',
+          'omastav':     'Omastav',
+          'osastav':     'Osastav',
+          'ma_inf':      'ma-инф.',
+          'da_inf':      'da-инф.',
+          'pres_3sg':    '3sg наст.',
+          'past_3sg':    '3sg прош.',
+          'nud_form':    '-nud',
+          'imper_2sg':   'Imper. 2sg',
+          'extra_form':  'Extra',
+          'level':       'Уровень',
+        } %}
+        {% for field, label in form_labels.items() %}
+          {% if exercise.forms.get(field) %}
+          <div class="form-item {% if field == exercise.answer_field %}form-item--target{% endif %}">
+            <span class="form-label">{{ label }}</span>
+            <span class="form-value">{{ exercise.forms[field] }}</span>
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+
+    {% else %}
+    <!-- Упражнений нет — не должно показываться, но на всякий -->
+    <div class="empty-state">
+      <div class="empty-icon">🤔</div>
+      <div class="empty-title">Нет упражнений</div>
+      <div class="empty-sub">В этом списке недостаточно данных для дрилла</div>
+      <a href="{{ url_for('view_list', list_id=drill.list_id) }}" class="btn btn-primary" style="margin-top:20px">
+        ← К списку
+      </a>
+    </div>
+    {% endif %}
+
+  </div>{# /drill-wrap #}
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script>
+    // Focus answer input on page load
+    const inp = document.getElementById('answerInput');
+    if (inp) inp.focus();
+
+    // Enter to submit
+    if (inp) {
+      inp.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          document.getElementById('answerForm').submit();
+        }
+      });
+    }
+
+    // After feedback shown, Enter → next
+    const feedbackWrap = document.getElementById('feedbackWrap');
+    if (feedbackWrap) {
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          const nextForm = feedbackWrap.querySelector('form');
+          if (nextForm) nextForm.submit();
+        }
+      });
+    }
+
+    function showHint() {
+      const btn  = document.getElementById('hintBtn');
+      const text = document.getElementById('hintText');
+      if (!btn || !text) return;
+      text.innerHTML = btn.dataset.hint;
+      text.classList.remove('hidden');
+      btn.style.display = 'none';
+    }
+  </script>
+</body>
+</html>

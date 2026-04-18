@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Начать урок — {{ lst.name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/drill.css') }}" />
+  <script>
+    (function () {
+      var t = localStorage.getItem('eesti_theme_v1') || 'light';
+      document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : '');
+    })();
+  </script>
+</head>
+<body>
+  <header class="drill-topbar">
+    <a href="{{ url_for('view_list', list_id=lst.id) }}" class="back-btn">←</a>
+    <div class="drill-meta">
+      <span class="drill-list-name">{{ lst.name }}</span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙</button>
+  </header>
+
+  <div class="drill-wrap">
+
+    <div class="drill-start-card">
+      <div class="drill-start-title">📚 Начать урок</div>
+
+      <div class="drill-start-meta">
+        В списке: <b>{{ word_count }}</b> слов ({{ ok_count }} готовы к дриллу)<br>
+        Упражнений в сессии: <b>≈{{ exercise_estimate }}</b><br>
+        Раундов: <b>3</b> — узнавание → формы → продукция
+      </div>
+
+      <form method="post" action="{{ url_for('start_drill', list_id=lst.id) }}">
+        <div>
+          <label class="input-label" for="topicInput">
+            Грамматическая тема (необязательно)
+          </label>
+          <input
+            type="text"
+            id="topicInput"
+            name="grammar_topic"
+            class="topic-input"
+            placeholder="Например: партитив, спряжение, падежи..."
+            autocomplete="off"
+          />
+          <div class="topic-suggestions">
+            {% for topic in ['партитив', 'спряжение', 'инфинитив', 'падежи', 'прилагательные'] %}
+            <button type="button" class="topic-chip"
+                    onclick="document.getElementById('topicInput').value='{{ topic }}'">
+              {{ topic }}
+            </button>
+            {% endfor %}
+          </div>
+          <p style="font-size:.72rem;color:var(--text3);margin-top:8px;">
+            Если задана тема — AI будет фокусировать объяснения именно на ней
+          </p>
+        </div>
+
+        {% if not has_api_key %}
+        <div class="flash" style="margin:0;">
+          ⚠️ <b>ANTHROPIC_API_KEY</b> не задан — AI-проверка для сложных упражнений отключена.
+          Точное совпадение и опечатки проверяются локально.
+        </div>
+        {% endif %}
+
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:14px;font-size:.9rem;">
+          ⚡ Начать урок
+        </button>
+      </form>
+    </div>
+
+  </div>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
